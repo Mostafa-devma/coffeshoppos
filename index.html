@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Coffee Shop POS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fdf3f8;
+    --panel: #ffffff;
+    --border: #e3e8f0;
+    --blue: #1592e6;
+    --blue-dark: #0d6fb3;
+    --blue-soft: #e4f3fd;
+    --pink: #f0457a;
+    --pink-soft: #fde6ee;
+    --text: #1f2a44;
+    --muted: #7d879c;
+    --ok: #1aa260;
+    --danger: #f0457a;
+    --accent: var(--blue);
+    --tile: var(--blue-dark);
+    --shadow: 0 6px 20px rgba(31, 42, 68, .07);
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Poppins", "Segoe UI", Tahoma, Arial, sans-serif; font-size: 14px;
+    overflow: hidden;
+  }
+  button { font-family: inherit; cursor: pointer; color: inherit; }
+  input, select, textarea { font-family: inherit; }
+  .ar { direction: rtl; }
+  .muted { color: var(--muted); }
+
+  /* ---------- header ---------- */
+  header {
+    height: 64px; display: flex; align-items: center; gap: 18px; padding: 0 22px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 18px; min-width: 0; }
+  .logo {
+    width: 36px; height: 36px; border-radius: 10px; flex: none;
+    background: linear-gradient(135deg, var(--blue) 0 50%, var(--pink) 50% 100%);
+    display: grid; place-items: center; color: #fff; font-size: 18px; transform: rotate(-12deg);
+  }
+  .brand span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .date { color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .spacer { flex: 1; }
+  .nav { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; }
+  .nav button {
+    border: 0; background: transparent; padding: 7px 12px; border-radius: 8px; font-size: 13px; color: var(--muted);
+    display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  }
+  .nav button:hover { background: #fff; color: var(--text); }
+  .bell { position: relative; border: 0; background: none; font-size: 20px; padding: 4px; }
+  .bell .dot {
+    position: absolute; top: -2px; right: -4px; background: var(--pink); color: #fff; font-size: 10px; font-weight: 600;
+    min-width: 17px; height: 17px; border-radius: 9px; display: grid; place-items: center; padding: 0 4px;
+  }
+  .user { display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 4px; }
+  .user .who { text-align: left; line-height: 1.2; }
+  .user .who b { display: block; font-size: 13px; font-weight: 600; }
+  .user .who small { font-size: 11px; color: var(--muted); }
+  .avatar {
+    width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, var(--blue), var(--pink));
+    color: #fff; display: grid; place-items: center; font-weight: 600;
+  }
+
+  /* ---------- layout ---------- */
+  .app {
+    height: calc(100% - 64px); display: grid; gap: 16px; padding: 0 16px 16px;
+    grid-template-columns: 290px minmax(0, 1fr) 340px;
+  }
+
+  /* ---------- left: totals + keypad ---------- */
+  .left { display: flex; flex-direction: column; min-height: 0; border-radius: var(--radius); overflow: hidden; background: #fff; box-shadow: var(--shadow); }
+  .total-box { text-align: center; padding: 16px 12px 10px; background: var(--bg); }
+  .total-box .lbl { font-size: 15px; font-weight: 500; }
+  .total-box .big { font-size: 34px; font-weight: 600; color: var(--blue); line-height: 1.25; font-variant-numeric: tabular-nums; }
+  .total-box .cur { font-size: 12px; color: var(--muted); }
+  .display-card { padding: 20px 14px 14px; text-align: center; border-bottom: 1px solid var(--border); }
+  .display-card .disp { font-size: 38px; font-weight: 500; color: #3e4659; line-height: 1.2; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; }
+  .display-card .remain { font-size: 13px; color: var(--pink); font-weight: 500; margin-top: 4px; }
+  .display-card .remain b { margin-left: 8px; color: var(--text); }
+  .display-card .hint { font-size: 11px; color: var(--muted); margin-top: 6px; min-height: 15px; }
+  .keypad {
+    flex: 1; display: grid; grid-template-columns: repeat(3, 1fr) 1.1fr; grid-template-rows: repeat(5, minmax(46px, 1fr));
+    min-height: 250px;
+  }
+  .keypad button {
+    border: 0; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    background: #fff; font-size: 20px; color: #3e4659;
+  }
+  .keypad button:active { background: var(--blue-soft); }
+  .keypad .fn { font-size: 18px; color: var(--muted); }
+  .keypad .b {
+    background: var(--blue); color: #fff; border-right: 0; border-bottom: 1px solid rgba(255,255,255,.25); font-size: 24px;
+  }
+  .keypad .b:active { background: var(--blue-dark); }
+  .keypad .b.plus { grid-row: span 2; }
+
+  /* ---------- middle ---------- */
+  .mid { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .tabs { display: flex; align-items: center; gap: 8px; padding: 4px 0 12px; overflow-x: auto; flex: none; }
+  .tab {
+    position: relative; border: 1px solid #c9d7e8; background: linear-gradient(#f4f9fe, #e4eef8); border-radius: 6px;
+    padding: 6px 14px; font-size: 12px; white-space: nowrap; color: var(--text);
+  }
+  .tab.pos { font-weight: 600; }
+  .tab.active::after {
+    content: ""; position: absolute; left: 6px; right: 6px; bottom: -8px; height: 3px; border-radius: 2px; background: var(--pink);
+  }
+  .tab.active { border-color: var(--blue); color: var(--blue-dark); font-weight: 600; }
+  .tab small { color: var(--muted); margin-left: 6px; font-weight: 400; }
+  .tabs .chev { color: var(--muted); font-size: 14px; }
+  .add-order {
+    border: 0; background: var(--pink); color: #fff; border-radius: 6px; padding: 7px 14px; font-size: 12px; font-weight: 500; white-space: nowrap;
+  }
+  .add-order:active { filter: brightness(.92); }
+
+  .sec-head { display: flex; align-items: center; gap: 16px; margin: 8px 0 10px; flex: none; }
+  .sec-head h2 { margin: 0; font-size: 17px; font-weight: 500; min-width: 100px; }
+  .search {
+    flex: 1; display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #cfe2f3; border-radius: 8px; padding: 0 12px; height: 38px;
+    box-shadow: inset 0 1px 3px rgba(21, 146, 230, .08);
+  }
+  .search input { flex: 1; border: 0; outline: 0; font-size: 13px; background: transparent; user-select: text; min-width: 0; }
+  .search .x { border: 0; background: none; color: var(--muted); font-size: 16px; padding: 0 2px; }
+
+  .cat-wrap { position: relative; flex: none; }
+  .cats { display: flex; gap: 12px; overflow-x: auto; scroll-behavior: smooth; padding: 4px 4px 10px; scrollbar-width: none; }
+  .cats::-webkit-scrollbar { display: none; }
+  .arrow {
+    position: absolute; top: 50%; transform: translateY(-60%); width: 26px; height: 26px; border-radius: 50%; border: 0;
+    background: var(--blue); color: #fff; font-size: 15px; z-index: 2; display: grid; place-items: center; box-shadow: var(--shadow);
+  }
+  .arrow.l { left: -10px; } .arrow.r { right: -10px; }
+  .cat {
+    flex: 0 0 140px; height: 112px; border-radius: 10px; border: 1px solid #bfe0f7; padding: 10px 12px; text-align: start;
+    background: linear-gradient(160deg, #ffffff, #e2f1fc); box-shadow: 0 4px 12px rgba(21, 146, 230, .10);
+    display: flex; flex-direction: column; justify-content: space-between; position: relative;
+  }
+  .cat.active { border: 2px solid var(--blue); background: linear-gradient(160deg, #eef8ff, #cfe8fb); }
+  .cat .pill {
+    align-self: flex-end; font-size: 10px; color: var(--blue); border: 1px solid var(--blue); border-radius: 10px; padding: 1px 10px; background: #fff;
+  }
+  .cat:nth-child(even) .pill { color: var(--pink); border-color: var(--pink); }
+  .cat .ic { font-size: 20px; line-height: 1; }
+  .cat .nm { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cat .cnt { font-size: 11px; color: var(--muted); }
+
+  .products {
+    flex: 1; min-height: 0; overflow-y: auto; display: grid; gap: 14px; align-content: start; padding: 2px 4px 10px;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+  .prod {
+    background: #fff; border: 1px solid #d9e6f2; border-radius: 10px; padding: 8px; text-align: start; position: relative;
+    box-shadow: 0 3px 10px rgba(31, 42, 68, .05); display: flex; flex-direction: column; gap: 6px;
+  }
+  .prod:hover { border-color: var(--blue); }
+  .prod:active { transform: scale(.97); }
+  .prod .img {
+    height: 74px; border-radius: 8px; display: grid; place-items: center; font-size: 38px;
+    background: linear-gradient(160deg, #f4f8fc, #e6eef6);
+  }
+  .prod .nm { font-size: 12px; font-weight: 600; line-height: 1.3; min-height: 31px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .prod .pr { font-size: 11px; color: var(--muted); padding-right: 24px; }
+  .prod .plus {
+    position: absolute; right: 8px; bottom: 8px; width: 20px; height: 20px; border-radius: 50%; background: var(--blue); color: #fff;
+    display: grid; place-items: center; font-size: 15px; line-height: 1;
+  }
+  .prod .qbadge {
+    position: absolute; top: 4px; left: 4px; background: var(--pink); color: #fff; font-size: 11px; font-weight: 600;
+    min-width: 20px; height: 20px; border-radius: 10px; display: grid; place-items: center; padding: 0 5px;
+  }
+  .prod.custom .img { background: repeating-linear-gradient(45deg, #f6f9fc 0 8px, #edf3f9 8px 16px); color: var(--blue); font-size: 30px; }
+  .prod .cat-tag { font-size: 10px; color: var(--muted); }
+  .no-res { color: var(--muted); padding: 30px; text-align: center; grid-column: 1 / -1; }
+
+  /* ---------- right: receipt ---------- */
+  .receipt {
+    background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  }
+  .r-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 16px 10px; }
+  .r-head h2 { margin: 0; font-size: 17px; font-weight: 500; }
+  .r-no { color: var(--pink); font-size: 13px; font-weight: 600; margin-top: 2px; }
+  .r-cust { font-size: 12px; font-weight: 500; margin-top: 6px; padding-bottom: 6px; border-bottom: 2px solid var(--blue-soft); }
+  .r-cust b { font-weight: 600; }
+  .round-btn {
+    width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--pink); background: #fff; color: var(--pink); font-size: 14px; flex: none;
+  }
+  .r-sub { display: flex; justify-content: space-between; padding: 0 16px 6px; font-size: 13px; font-weight: 500; }
+  .r-sub span { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .r-lines { flex: 1; overflow-y: auto; padding: 4px 12px; min-height: 80px; position: relative; }
+  .r-empty { text-align: center; color: var(--muted); font-size: 13px; padding: 40px 16px; }
+  .r-empty div { font-size: 34px; margin-bottom: 6px; }
+  .rl {
+    display: grid; grid-template-columns: 46px 1fr auto; gap: 10px; align-items: center; padding: 8px; border-radius: 10px;
+    border: 1px solid transparent; position: relative; cursor: pointer; margin-bottom: 4px;
+  }
+  .rl:hover { background: #f8fbfe; }
+  .rl.sel { border-color: var(--blue); background: #f2f9ff; }
+  .rl .th { width: 46px; height: 46px; border-radius: 8px; background: linear-gradient(160deg, #f4f8fc, #e6eef6); display: grid; place-items: center; font-size: 24px; }
+  .rl .nm { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rl .pr { font-size: 11px; color: var(--muted); }
+  .rl .note { font-size: 11px; color: var(--blue-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rl .sent { font-size: 10px; color: var(--ok); font-weight: 600; }
+  .rl .right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .rl .del { border: 0; background: none; color: var(--pink); font-size: 14px; padding: 0 2px; }
+  .rl .line-total { font-size: 12px; font-weight: 600; }
+  .stepper { display: flex; align-items: center; gap: 6px; }
+  .stepper button {
+    width: 20px; height: 20px; border-radius: 50%; border: 0; background: #e8eef6; color: var(--muted); font-size: 14px; line-height: 1; padding: 0;
+  }
+  .stepper button.inc { background: var(--blue-soft); color: var(--blue); }
+  .stepper b { min-width: 18px; text-align: center; font-size: 13px; }
+
+  .r-tools { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 10px 12px; border-top: 1px solid var(--border); }
+  .r-tools button {
+    border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 6px 2px; font-size: 10px; color: var(--muted);
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .r-tools button i { font-style: normal; font-size: 16px; }
+  .r-tools button:active { background: var(--blue-soft); }
+
+  .r-totals { background: #f6f8fb; padding: 10px 16px; font-size: 12px; }
+  .r-totals .row { display: flex; justify-content: space-between; padding: 3px 0; color: var(--muted); }
+  .r-totals .row b { color: var(--text); font-weight: 500; }
+  .r-totals .row.disc b { color: var(--pink); }
+  .r-totals .row.tot { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 8px; font-size: 14px; color: var(--text); font-weight: 600; }
+  .r-totals .row.tot b { color: var(--blue); font-size: 17px; font-weight: 600; }
+  .r-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .r-actions button { border: 0; padding: 18px 0; font-size: 15px; font-weight: 500; color: #fff; }
+  .r-actions .cancel { background: var(--pink); }
+  .r-actions .complete { background: var(--blue); }
+  .r-actions button:active { filter: brightness(.92); }
+
+  /* ---------- modal ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(31, 42, 68, .45); display: none;
+    align-items: center; justify-content: center; z-index: 50; padding: 16px; backdrop-filter: blur(2px);
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: 14px; width: min(560px, 100%); max-height: 90vh; display: flex; flex-direction: column;
+    box-shadow: 0 20px 50px rgba(0,0,0,.25); overflow: hidden;
+  }
+  .modal h2 { margin: 0; padding: 16px 20px; font-size: 17px; font-weight: 600; border-bottom: 1px solid var(--border); }
+  .modal .body { padding: 16px 20px; overflow-y: auto; }
+  .modal .foot { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+  .btn {
+    border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 10px 18px; font-size: 14px; font-weight: 500;
+  }
+  .btn.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .btn.ok { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .btn.danger { background: var(--pink); color: #fff; border-color: var(--pink); }
+  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+  .field label { font-size: 12px; color: var(--muted); }
+  .field input, .field select, .field textarea {
+    font-size: 16px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; user-select: text; outline-color: var(--blue);
+  }
+  .pay-total { font-size: 30px; font-weight: 700; text-align: center; margin-bottom: 6px; color: var(--blue); }
+  .pay-change { font-size: 20px; text-align: center; font-weight: 600; min-height: 28px; }
+  .quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+  .quick .btn { padding: 10px 4px; }
+  .tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; }
+  .tables .tbtn {
+    height: 70px; border-radius: 10px; border: 1px solid #bfe0f7; background: linear-gradient(160deg, #fff, #e2f1fc); font-weight: 600; font-size: 15px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  }
+  .tables .tbtn small { font-size: 11px; font-weight: 500; color: var(--muted); }
+  .tables .tbtn.busy { background: linear-gradient(160deg, #fff, var(--pink-soft)); border-color: var(--pink); }
+  .tables .tbtn.busy small { color: var(--pink); }
+  .tables .tbtn.cur { border: 2px solid var(--blue); }
+  table.list { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.list th, table.list td { padding: 8px 6px; border-bottom: 1px solid #eef0f4; text-align: left; }
+  table.list th { font-weight: 600; font-size: 12px; color: var(--muted); }
+  table.list td.r, table.list th.r { text-align: right; }
+
+  /* ---------- history & statistics ---------- */
+  .modal.wide { width: min(1000px, 100%); height: 92vh; max-height: 92vh; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-bottom: 12px; }
+  .filters label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); }
+  .filters input, .filters select { font-size: 14px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 8px; user-select: text; }
+  .filters .chk { flex-direction: row; align-items: center; gap: 6px; font-size: 13px; color: var(--text); padding-bottom: 8px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .presets .btn { padding: 7px 12px; font-size: 13px; }
+  .presets .btn.on { background: var(--blue); color: #fff; border-color: var(--blue); }
+  table.list tr.rc { cursor: pointer; }
+  table.list tr.rc:hover { background: #f6f9fd; }
+  table.list tr.open { background: #eef6fd; }
+  table.list tr.void td { color: var(--muted); text-decoration: line-through; }
+  table.list tr.void td.status { text-decoration: none; }
+  .pill-s { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+  .pill-s.paid { background: #e3f4ea; color: var(--ok); }
+  .pill-s.void { background: var(--pink-soft); color: var(--pink); }
+  .detail { background: #f8fafd; padding: 10px 14px; }
+  .detail .dl { display: flex; justify-content: space-between; padding: 3px 0; font-size: 13px; }
+  .detail .acts { display: flex; gap: 8px; margin-top: 10px; }
+  .detail .acts .btn { padding: 7px 14px; font-size: 13px; }
+  .sumbar { display: flex; justify-content: space-between; font-size: 13px; padding: 8px 2px 0; color: var(--muted); }
+  .sumbar b { color: var(--text); }
+  .empty { padding: 30px; text-align: center; color: var(--muted); }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .kpi { border: 1px solid #cfe2f3; border-radius: 10px; padding: 10px 12px; background: linear-gradient(160deg, #fff, #f1f8fe); }
+  .kpi .k-l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+  .kpi .k-v { font-size: 20px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .kpi .k-s { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .card { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+  .card.full { grid-column: 1 / -1; }
+  .card h3 { margin: 0 0 10px; font-size: 13px; font-weight: 600; }
+  .card .none { color: var(--muted); font-size: 13px; padding: 16px 0; text-align: center; }
+  .vchart { display: flex; align-items: flex-end; gap: 2px; height: 150px; border-bottom: 1px solid var(--border); position: relative; }
+  .vcol { flex: 1; height: 100%; display: flex; align-items: flex-end; position: relative; min-width: 0; }
+  .vcol .bar { width: 100%; max-width: 34px; margin: 0 auto; background: var(--blue); border-radius: 4px 4px 0 0; }
+  .vcol:hover .bar { background: var(--blue-dark); }
+  .vlabels { display: flex; gap: 2px; font-size: 10px; color: var(--muted); margin-top: 4px; }
+  .vlabels span { flex: 1; text-align: center; overflow: hidden; white-space: nowrap; min-width: 0; }
+  .vmax { position: absolute; top: -2px; left: 0; font-size: 10px; color: var(--muted); border-top: 1px dashed var(--border); width: 100%; pointer-events: none; }
+  .hrow { display: grid; grid-template-columns: minmax(80px, 38%) 1fr auto; gap: 8px; align-items: center; padding: 4px 0; font-size: 13px; position: relative; }
+  .hrow .hl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hrow .track { height: 12px; }
+  .hrow .bar { height: 100%; background: var(--blue); border-radius: 0 4px 4px 0; min-width: 2px; }
+  .hrow:hover .bar { background: var(--blue-dark); }
+  .hrow .hv { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+  .hrow .hv small { color: var(--muted); font-weight: 400; }
+  [data-tip]:hover::after {
+    content: attr(data-tip); position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%);
+    background: var(--text); color: #fff; font-size: 12px; padding: 5px 9px; border-radius: 6px; white-space: pre; z-index: 5; pointer-events: none;
+  }
+  .hrow[data-tip]:hover::after { left: 60%; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%); background: var(--text); color: #fff;
+    padding: 10px 18px; border-radius: 20px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 60;
+  }
+  .toast.show { opacity: 1; }
+
+  #printArea { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; left: 0; top: 0; width: 72mm; font-family: monospace; font-size: 12px; color: #000; }
+    #printArea .c { text-align: center; }
+    #printArea .row { display: flex; justify-content: space-between; gap: 6px; }
+    #printArea hr { border: 0; border-top: 1px dashed #000; }
+  }
+
+  @media (max-width: 1180px) {
+    .app { grid-template-columns: 250px minmax(0, 1fr) 300px; gap: 12px; padding: 0 12px 12px; }
+    .nav button span { display: none; }
+    .date { display: none; }
+  }
+  @media (max-width: 900px) {
+    body { overflow: auto; }
+    header { padding: 0 16px; gap: 10px; }
+    .user .who { display: none; }
+    .app { height: auto; grid-template-columns: 1fr; padding: 0 16px 16px; }
+    .mid { order: 1; } .receipt { order: 2; min-height: 420px; } .left { order: 3; }
+    .products { max-height: 60vh; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><div class="logo">☕</div><span id="shopName"></span></div>
+  <div class="date" id="clock"></div>
+  <div class="spacer"></div>
+  <nav class="nav">
+    <button data-act="hold"><i>🪑</i><span>Tables</span></button>
+    <button data-act="delivery"><i>🛵</i><span>Delivery</span></button>
+    <button data-act="history"><i>🧾</i><span id="histLabel">History</span></button>
+    <button data-act="stats"><i>📊</i><span>Statistics</span></button>
+    <button data-act="report"><i>⏻</i><span>Close Day</span></button>
+    <button id="menuBtn"><i>⚙️</i><span>Menu</span></button>
+  </nav>
+  <button class="bell" data-act="hold" title="Open orders">🔔<span class="dot" id="openCount">0</span></button>
+  <button class="user" id="userBtn" title="Change cashier">
+    <div class="who"><b id="cashierName"></b><small>Cashier</small></div>
+    <div class="avatar" id="avatar"></div>
+  </button>
+</header>
+
+<div class="app">
+  <!-- left: totals + keypad -->
+  <section class="left">
+    <div class="total-box">
+      <div class="lbl">Total Amount</div>
+      <div class="big" id="bigTotal">0</div>
+      <div class="cur">LBP</div>
+    </div>
+    <div class="display-card">
+      <div class="disp" id="disp">0</div>
+      <div class="remain"><span id="remLbl">Remaining amount:</span><b id="remVal">0</b></div>
+      <div class="hint" id="hint"></div>
+    </div>
+    <div class="keypad">
+      <button class="fn" data-k="%" title="Discount %">%</button>
+      <button class="fn" data-k="C" title="Clear entry">C</button>
+      <button class="fn" data-k="x" title="Set quantity of selected item">×</button>
+      <button class="b" data-k="back" title="Backspace">⌫</button>
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+      <button class="b" data-k="-" title="Decrease selected item">−</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+      <button class="b plus" data-k="+" title="Increase selected item">+</button>
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+      <button data-k="0">0</button><button data-k="00">00</button><button data-k="000">000</button>
+      <button class="b" data-k="=" title="Pay">=</button>
+    </div>
+  </section>
+
+  <!-- middle: orders, categories, products -->
+  <section class="mid">
+    <div class="tabs" id="tabs"></div>
+
+    <div class="sec-head">
+      <h2>Categories</h2>
+      <label class="search"><span>🔍</span><input id="catSearch" placeholder="Search here..."></label>
+    </div>
+    <div class="cat-wrap">
+      <button class="arrow l" id="catL">‹</button>
+      <div class="cats" id="cats"></div>
+      <button class="arrow r" id="catR">›</button>
+    </div>
+
+    <div class="sec-head">
+      <h2>Products</h2>
+      <label class="search"><span>🔍</span><input id="prodSearch" placeholder="Search here..."><button class="x" id="prodClear" hidden>✕</button></label>
+    </div>
+    <div class="products" id="products"></div>
+  </section>
+
+  <!-- right: receipt -->
+  <aside class="receipt">
+    <div class="r-head">
+      <div style="min-width:0">
+        <h2>Sales Receipt</h2>
+        <div class="r-no" id="rNo"></div>
+        <div class="r-cust">Customer Name : <b id="rCust" dir="auto"></b></div>
+      </div>
+      <button class="round-btn" id="custBtn" title="Edit customer">✎</button>
+    </div>
+    <div class="r-sub">Order List <span id="rCount"></span></div>
+    <div class="r-lines" id="rLines"></div>
+    <div class="r-tools">
+      <button data-act="kitchen"><i>👨‍🍳</i>Kitchen</button>
+      <button data-act="print"><i>🖨️</i>Print</button>
+      <button data-act="discount"><i>%</i>Discount</button>
+      <button data-act="split"><i>✂️</i>Split</button>
+      <button data-act="edit"><i>✎</i>Note</button>
+    </div>
+    <div class="r-totals" id="rTotals"></div>
+    <div class="r-actions">
+      <button class="cancel" data-act="clear">Cancel</button>
+      <button class="complete" id="completeBtn">Complete</button>
+    </div>
+  </aside>
+</div>
+
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+<div id="printArea"></div>
+
+<script>
+/* =========================================================
+   DEFAULT MENU — used only on first run (or "Reset default").
+   Your saved menu, orders and sales are kept in this browser.
+   Prices are in LBP.
+   ========================================================= */
+const DEFAULT_MENU = [
+  { id: "hot", name: "مشروبات ساخنة", items: [
+    ["إسبريسو", 150000], ["دبل إسبريسو", 220000], ["كابتشينو", 250000], ["لاتيه", 270000],
+    ["نسكافيه", 150000], ["قهوة تركية", 100000], ["شاي", 80000], ["شاي أخضر", 100000],
+    ["هوت شوكولا", 250000], ["زهورات", 100000] ] },
+  { id: "cold", name: "مشروبات باردة", items: [
+    ["مياه صغير", 60000], ["مياه كبير", 100000], ["بيبسي", 100000], ["سفن أب", 100000],
+    ["عصير برتقال", 250000], ["ليموناضة", 200000], ["آيس لاتيه", 300000], ["فرابيه", 350000],
+    ["ميلك شيك", 400000], ["سموذي", 400000] ] },
+  { id: "arg", name: "أراكيل", items: [
+    ["أركيلة تفاحتين", 700000], ["أركيلة عنب", 700000], ["أركيلة ليمون ونعنع", 700000],
+    ["أركيلة بطيخ", 700000], ["أركيلة علكة", 700000], ["أركيلة عجمي", 800000], ["تغيير راس", 300000] ] },
+  { id: "argx", name: "أراكيل خارجي", items: [
+    ["أركيلة خارجي تفاحتين", 900000], ["أركيلة خارجي عنب", 900000], ["أركيلة خارجي مشكل", 900000] ] },
+  { id: "argp", name: "أراكيل فخم", items: [
+    ["أركيلة فاخرة", 1200000], ["أركيلة فاكهة", 1500000] ] },
+  { id: "nuts", name: "بزورات", items: [
+    ["بزورات صغير", 200000], ["بزورات كبير", 400000], ["فستق", 450000], ["كاجو", 600000] ] },
+  { id: "fries", name: "بطاطا", items: [
+    ["بطاطا صغير", 250000], ["بطاطا كبير", 400000], ["بطاطا ودجز", 450000] ] },
+  { id: "smoke", name: "دخان", items: [
+    ["سيدرز", 150000], ["مارلبورو", 200000], ["ونستون", 180000] ] },
+  { id: "snack", name: "سناكات", items: [
+    ["كرواسون", 150000], ["كرواسون شوكولا", 200000], ["كيك", 250000], ["بسكويت", 100000] ] },
+  { id: "saj", name: "صاج", items: [
+    ["صاج زعتر", 150000], ["صاج جبنة", 250000], ["صاج لبنة", 250000], ["صاج نصف ونص", 250000], ["صاج نوتيلا", 300000] ] },
+  { id: "del", name: "Delivery", items: [
+    ["Delivery Fee", 100000], ["Delivery Fee Far", 200000] ] },
+];
+const DEFAULT_ICONS = { hot: "☕", cold: "🥤", arg: "💨", argx: "💨", argp: "💨", nuts: "🥜", fries: "🍟", smoke: "🚬", snack: "🥐", saj: "🫓", del: "🛵" };
+
+/* ---------- state & storage (same storage key as before, so saved data is kept) ---------- */
+const STORE_KEY = "coffee_pos_v1";
+const TABLE_COUNT = 24;
+let S = load();
+let selLine = null;      // index of selected line in current order
+let entry = "";          // keypad entry buffer
+let curCat = "all";      // selected category id
+let catQuery = "", prodQuery = "";
+
+function blankState() {
+  return {
+    menu: DEFAULT_MENU.map(c => ({ id: c.id, name: c.name, icon: DEFAULT_ICONS[c.id], items: c.items.map(([n, p]) => ({ name: n, price: p })) })),
+    orders: {},            // key -> { lines: [], discount: 0, openedAt, guests, customer }
+    current: "T8",
+    sales: [],             // closed receipts
+    receiptNo: 1,
+    cashier: "Ali",
+    shop: "Coffee Shop",
+  };
+}
+function load() {
+  try { const s = JSON.parse(localStorage.getItem(STORE_KEY)); if (s && s.menu) return s; } catch (e) {}
+  return blankState();
+}
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} }
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n).toLocaleString("en-US");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function tableName(key) {
+  if (key.startsWith("T")) return "طاولة رقم " + key.slice(1);
+  if (key.startsWith("D")) return "Delivery #" + key.slice(1);
+  if (key.startsWith("A")) return "Takeaway #" + key.slice(1);
+  return key;
+}
+function shortName(key) {
+  if (key.startsWith("T")) return "Table " + key.slice(1);
+  if (key.startsWith("D")) return "Delivery " + key.slice(1);
+  if (key.startsWith("A")) return "Order " + key.slice(1);
+  return key;
+}
+function order(key = S.current) {
+  if (!S.orders[key]) S.orders[key] = { lines: [], discount: 0, openedAt: Date.now(), guests: 1 };
+  return S.orders[key];
+}
+function subtotal(o) { return o.lines.reduce((s, l) => s + l.price * l.qty, 0); }
+function totals(o) {
+  const sub = subtotal(o);
+  const disc = Math.round(sub * (o.discount || 0) / 100);
+  return { sub, disc, total: sub - disc };
+}
+function isOpen(key) { const o = S.orders[key]; return o && o.lines.length > 0; }
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 1800);
+}
+function timeStr(ts) { const d = new Date(ts); return d.toTimeString().slice(0, 5); }
+function catIcon(c) { return (c && (c.icon || DEFAULT_ICONS[c.id])) || "🍽️"; }
+function lineIcon(l) { return l.cat ? catIcon(S.menu.find(c => c.id === l.cat)) : "✏️"; }
+
+/* ---------- rendering ---------- */
+function render() {
+  const o = order();
+  const t = totals(o);
+  if (selLine != null && selLine >= o.lines.length) selLine = null;
+
+  $("shopName").textContent = S.shop;
+  $("cashierName").textContent = S.cashier;
+  $("avatar").textContent = (S.cashier || "?").trim().charAt(0).toUpperCase();
+  $("openCount").textContent = Object.keys(S.orders).filter(isOpen).length;
+  $("histLabel").textContent = `History (${salesBetween(new Date(), new Date()).length})`;
+
+  // left
+  $("bigTotal").textContent = fmt(t.total);
+  const typed = entry !== "" ? parseFloat(entry) || 0 : null;
+  $("disp").textContent = entry !== "" ? fmt0(entry) : fmt(t.total);
+  if (typed != null && typed > t.total && t.total > 0) {
+    $("remLbl").textContent = "Change:"; $("remVal").textContent = fmt(typed - t.total);
+  } else {
+    $("remLbl").textContent = "Remaining amount:"; $("remVal").textContent = fmt(typed != null ? Math.max(0, t.total - typed) : t.total);
+  }
+  $("hint").textContent = entry !== ""
+    ? (selLine != null ? "× sets qty · + / − change qty · = pay with this cash" : "Tap a product to add this many · = pay with this cash")
+    : (selLine != null ? "Selected: " + o.lines[selLine].name : "");
+
+  renderTabs();
+  renderCats();
+  renderProducts();
+  renderReceipt();
+  save();
+}
+function fmt0(s) {
+  const [a, b] = s.split(".");
+  return (a ? Number(a).toLocaleString("en-US") : "0") + (b !== undefined ? "." + b : "");
+}
+
+function renderTabs() {
+  const keys = Object.keys(S.orders).filter(k => isOpen(k) || k === S.current);
+  const rank = k => ({ T: 0, A: 1, D: 2 }[k[0]] ?? 3) * 1e6 + (parseInt(k.slice(1)) || 0);
+  keys.sort((a, b) => rank(a) - rank(b));
+  $("tabs").innerHTML = `<button class="tab pos" data-act="hold">POS</button><span class="chev">›</span>` +
+    keys.map(k => {
+      const n = S.orders[k].lines.reduce((a, l) => a + l.qty, 0);
+      return `<button class="tab ${k === S.current ? "active" : ""}" data-tab="${k}">${shortName(k)}${n ? `<small>${n}</small>` : ""}</button>`;
+    }).join("") +
+    `<button class="add-order" data-act="new">Add Order +</button>`;
+}
+
+function renderCats() {
+  const q = catQuery.trim().toLowerCase();
+  const total = S.menu.reduce((a, c) => a + c.items.length, 0);
+  const cats = S.menu.filter(c => !q || c.name.toLowerCase().includes(q));
+  const card = (id, icon, name, n) => `
+    <button class="cat ${curCat === id ? "active" : ""}" data-cat="${id}">
+      <span class="pill">Available</span>
+      <span class="ic">${icon}</span>
+      <span><div class="nm" dir="auto">${esc(name)}</div><div class="cnt">${n} items</div></span>
+    </button>`;
+  $("cats").innerHTML = (q ? "" : card("all", "🗂️", "All Category", total)) +
+    (cats.map(c => card(c.id, catIcon(c), c.name, c.items.length)).join("") || `<div class="muted" style="padding:20px">No category found</div>`);
+}
+
+function renderProducts() {
+  const q = prodQuery.trim().toLowerCase();
+  const o = order();
+  const inOrder = {};
+  o.lines.forEach(l => inOrder[l.name] = (inOrder[l.name] || 0) + l.qty);
+  const list = [];
+  S.menu.forEach(c => {
+    if (curCat !== "all" && c.id !== curCat && !q) return;
+    c.items.forEach((it, idx) => { if (!q || it.name.toLowerCase().includes(q)) list.push({ c, it, idx }); });
+  });
+  $("prodClear").hidden = !q;
+  $("products").innerHTML = list.map(({ c, it, idx }) => `
+    <button class="prod" data-add="${c.id}:${idx}">
+      ${inOrder[it.name] ? `<span class="qbadge">${inOrder[it.name]}</span>` : ""}
+      <div class="img">${catIcon(c)}</div>
+      <div class="nm" dir="auto">${esc(it.name)}</div>
+      ${q || curCat === "all" ? `<div class="cat-tag" dir="auto">${esc(c.name)}</div>` : ""}
+      <div class="pr">LBP ${fmt(it.price)}</div>
+      <span class="plus">+</span>
+    </button>`).join("") +
+    (q && !list.length ? `<div class="no-res">No products match “${esc(prodQuery)}”</div>` : "") +
+    `<button class="prod custom" data-act="keyboard">
+      <div class="img">＋</div><div class="nm">Custom item</div><div class="pr">any name & price</div>
+    </button>`;
+}
+
+function renderReceipt() {
+  const o = order(); const t = totals(o);
+  $("rNo").textContent = "#" + String(S.receiptNo).padStart(5, "0");
+  $("rCust").textContent = o.customer ? `${o.customer} — ${shortName(S.current)}` : tableName(S.current);
+  const n = o.lines.reduce((a, l) => a + l.qty, 0);
+  $("rCount").textContent = n ? `${n} item(s)` : "";
+  $("rLines").innerHTML = o.lines.length ? o.lines.map((l, i) => `
+    <div class="rl ${i === selLine ? "sel" : ""}" data-i="${i}">
+      <div class="th">${lineIcon(l)}</div>
+      <div style="min-width:0">
+        <div class="nm" dir="auto">${esc(l.name)}</div>
+        <div class="pr">LBP ${fmt(l.price)} ${l.sent ? '<span class="sent">✓ sent</span>' : ""}</div>
+        ${l.note ? `<div class="note" dir="auto">✎ ${esc(l.note)}</div>` : ""}
+      </div>
+      <div class="right">
+        <button class="del" data-del="${i}" title="Remove">🗑</button>
+        <div class="stepper">
+          <button data-step="-1" data-i="${i}">−</button><b>${l.qty}</b><button class="inc" data-step="1" data-i="${i}">+</button>
+        </div>
+      </div>
+    </div>`).join("")
+    : `<div class="r-empty"><div>🧾</div>No items yet.<br>Tap a product to add it.</div>`;
+  // keep the selected line visible by scrolling only the list (never the whole page)
+  const box = $("rLines"), sel = box.querySelector(".sel");
+  if (sel) {
+    if (sel.offsetTop < box.scrollTop) box.scrollTop = sel.offsetTop;
+    else if (sel.offsetTop + sel.offsetHeight > box.scrollTop + box.clientHeight) box.scrollTop = sel.offsetTop + sel.offsetHeight - box.clientHeight;
+  }
+  $("rTotals").innerHTML = `
+    <div class="row"><span>Subtotal</span><b>${fmt(t.sub)}</b></div>
+    ${o.discount ? `<div class="row disc"><span>Discount ${o.discount}%</span><b>−${fmt(t.disc)}</b></div>` : ""}
+    ${S.usdRate ? `<div class="row"><span>In USD @ ${fmt(S.usdRate)}</span><b>$${(t.total / S.usdRate).toFixed(2)}</b></div>` : ""}
+    <div class="row tot"><span>TOTAL</span><b>LBP ${fmt(t.total)}</b></div>`;
+}
+
+/* ---------- order operations ---------- */
+function takeEntryNumber() {
+  const n = parseFloat(entry); entry = ""; return isNaN(n) ? null : n;
+}
+function addItem(catId, idx) {
+  const cat = S.menu.find(c => c.id === catId); const it = cat.items[idx];
+  const qty = takeEntryNumber() || 1;
+  const o = order();
+  const i = o.lines.findIndex(l => l.name === it.name && l.price === it.price && !l.sent && !l.note);
+  if (i >= 0) { o.lines[i].qty += qty; selLine = i; }
+  else { o.lines.push({ name: it.name, price: it.price, qty, note: "", sent: false, cat: catId }); selLine = o.lines.length - 1; }
+  if (o.lines.length === 1) o.openedAt = Date.now();
+  render();
+}
+function needLine() {
+  if (selLine == null || !order().lines[selLine]) { toast("Select an item in the receipt first"); return null; }
+  return order().lines[selLine];
+}
+function stepLine(i, delta) {
+  const o = order(); const l = o.lines[i]; if (!l) return;
+  l.qty += delta;
+  if (l.qty <= 0) { removeLine(i); return; }
+  selLine = i; render();
+}
+function removeLine(i) {
+  const o = order(); const l = o.lines[i];
+  const doIt = () => { o.lines.splice(i, 1); selLine = null; render(); };
+  l.sent ? confirmBox(`"${l.name}" was already sent to the kitchen. Remove anyway?`, doIt, true) : doIt();
+}
+function changeQty(delta) {
+  const l = needLine(); if (!l) return;
+  const step = takeEntryNumber() || 1;
+  if (l.qty + delta * step <= 0) { entry = ""; removeLine(selLine); return; }
+  l.qty += delta * step; render();
+}
+
+/* ---------- modal ---------- */
+function openModal(html, wide) {
+  $("modal").className = "modal" + (wide ? " wide" : "");
+  $("modal").innerHTML = html; $("overlay").classList.add("open");
+}
+function closeModal() { $("overlay").classList.remove("open"); $("modal").innerHTML = ""; $("modal").className = "modal"; }
+$("overlay").addEventListener("click", e => { if (e.target.id === "overlay") closeModal(); });
+function ask(title, label, value, cb, type = "text") {
+  openModal(`<h2>${esc(title)}</h2><div class="body"><div class="field"><label>${esc(label)}</label>
+    <input id="askIn" type="${type}" value="${esc(value ?? "")}" dir="auto"></div></div>
+    <div class="foot"><button class="btn" id="askNo">Cancel</button><button class="btn primary" id="askOk">OK</button></div>`);
+  const inp = $("askIn"); inp.focus(); inp.select();
+  const ok = () => { const v = inp.value; closeModal(); cb(v); };
+  $("askOk").onclick = ok; $("askNo").onclick = closeModal;
+  inp.onkeydown = e => { if (e.key === "Enter") ok(); if (e.key === "Escape") closeModal(); };
+}
+function confirmBox(msg, cb, danger) {
+  openModal(`<h2>Confirm</h2><div class="body">${esc(msg)}</div>
+    <div class="foot"><button class="btn" id="cNo">No</button><button class="btn ${danger ? "danger" : "primary"}" id="cYes">Yes</button></div>`);
+  $("cNo").onclick = closeModal; $("cYes").onclick = () => { closeModal(); cb(); };
+}
+
+/* ---------- tables ---------- */
+function showTables() {
+  const keys = [];
+  for (let i = 1; i <= TABLE_COUNT; i++) keys.push("T" + i);
+  Object.keys(S.orders).filter(k => !k.startsWith("T") && isOpen(k)).forEach(k => keys.push(k));
+  openModal(`<h2>Tables / Open orders</h2><div class="body"><div class="tables">
+    ${keys.map(k => {
+      const o = S.orders[k]; const busy = isOpen(k);
+      const label = k.startsWith("T") ? k.slice(1) : (k.startsWith("D") ? "🛵 " + k.slice(1) : "🥡 " + k.slice(1));
+      return `<button class="tbtn ${busy ? "busy" : ""} ${k === S.current ? "cur" : ""}" data-t="${k}">
+        ${label}<small>${busy ? fmt(totals(o).total) : "free"}</small></button>`;
+    }).join("")}
+    </div></div>
+    <div class="foot"><button class="btn" id="tTake">+ Takeaway</button><button class="btn" id="tClose">Close</button></div>`);
+  $("modal").querySelectorAll("[data-t]").forEach(b => b.onclick = () => switchTo(b.dataset.t));
+  $("tClose").onclick = closeModal;
+  $("tTake").onclick = () => switchTo(nextKey("A"));
+}
+function nextKey(prefix) {
+  let n = 1; while (isOpen(prefix + n)) n++; return prefix + n;
+}
+function switchTo(key) {
+  if (!isOpen(S.current) && S.current !== key) delete S.orders[S.current];
+  S.current = key; order(key); selLine = null; entry = "";
+  closeModal(); render();
+}
+
+/* ---------- payment ---------- */
+function showPay(prefill) {
+  const o = order(); const t = totals(o);
+  if (!o.lines.length) return toast("Order is empty");
+  const quicks = [t.total, 500000, 1000000, 2000000, 5000000, 10000000].filter((v, i, a) => a.indexOf(v) === i).slice(0, 6);
+  openModal(`<h2>Payment — ${esc(tableName(S.current))}</h2><div class="body">
+    <div class="muted" style="text-align:center">Total due</div>
+    <div class="pay-total">LBP ${fmt(t.total)}</div>
+    <div class="field"><label>Method</label><select id="pMethod"><option>Cash LBP</option><option>Cash USD</option><option>Card</option><option>Wish / OMT</option></select></div>
+    <div class="field" id="rateField" style="display:none"><label>USD rate (LBP per $)</label><input id="pRate" type="number" value="${S.usdRate || 89500}"></div>
+    <div class="field"><label id="recvLabel">Received</label><input id="pRecv" type="number" value="${prefill || ""}" placeholder="${t.total}"></div>
+    <div class="quick">${quicks.map(q => `<button class="btn" data-q="${q}">${fmt(q)}</button>`).join("")}</div>
+    <div class="pay-change" id="pChange"></div>
+  </div>
+  <div class="foot"><button class="btn" id="pCancel">Cancel</button><button class="btn ok" id="pOk">Complete & Print</button></div>`);
+  const recv = $("pRecv"), method = $("pMethod"), rate = $("pRate");
+  const received = () => {
+    const v = parseFloat(recv.value) || (method.value === "Cash USD" ? t.total / (parseFloat(rate.value) || 1) : t.total);
+    return method.value === "Cash USD" ? v * (parseFloat(rate.value) || 1) : v;
+  };
+  const upd = () => {
+    $("rateField").style.display = method.value === "Cash USD" ? "" : "none";
+    $("recvLabel").textContent = method.value === "Cash USD" ? "Received ($)" : "Received (LBP)";
+    const ch = received() - t.total;
+    $("pChange").textContent = ch >= 0 ? `Change: LBP ${fmt(ch)}` : `Missing: LBP ${fmt(-ch)}`;
+    $("pChange").style.color = ch >= 0 ? "var(--ok)" : "var(--pink)";
+  };
+  recv.oninput = upd; method.onchange = upd; rate.oninput = upd;
+  $("modal").querySelectorAll("[data-q]").forEach(b => b.onclick = () => { method.value = "Cash LBP"; recv.value = b.dataset.q; upd(); });
+  upd(); recv.focus();
+  $("pCancel").onclick = closeModal;
+  $("pOk").onclick = () => {
+    const r = received();
+    if (r < t.total - 0.5) return toast("Received amount is less than total");
+    if (method.value === "Cash USD") S.usdRate = parseFloat(rate.value);
+    const sale = {
+      no: S.receiptNo++, table: S.current, cashier: S.cashier, at: Date.now(), customer: o.customer || "",
+      lines: o.lines.map(l => ({ ...l })), discount: o.discount, ...t,
+      method: method.value, received: r, change: Math.max(0, r - t.total),
+    };
+    S.sales.push(sale);
+    delete S.orders[S.current];
+    selLine = null; entry = "";
+    closeModal();
+    printReceipt(sale);
+    if (!S.current.startsWith("T")) S.current = "T1";
+    render();
+    toast(`Paid ✓  Change: LBP ${fmt(sale.change)}`);
+  };
+}
+
+/* ---------- printing ---------- */
+function printReceipt(sale, kitchen) {
+  const p = $("printArea");
+  if (kitchen) {
+    p.innerHTML = `<div class="c"><b>KITCHEN / BAR</b></div><div class="c">${esc(tableName(sale.table))}</div>
+      <div class="c">${new Date().toLocaleString()}</div><hr>
+      ${sale.lines.map(l => `<div class="row"><b>${l.qty} x</b><span style="flex:1">${esc(l.name)}${l.note ? "<br>  * " + esc(l.note) : ""}</span></div>`).join("")}<hr>`;
+  } else {
+    p.innerHTML = `<div class="c"><b>${esc(S.shop)}</b></div>
+      <div class="c">${sale.no ? "Receipt #" + sale.no : "PRE-BILL"} — ${esc(tableName(sale.table))}</div>
+      ${sale.customer ? `<div class="c">${esc(sale.customer)}</div>` : ""}
+      <div class="c">${new Date(sale.at || Date.now()).toLocaleString()} — ${esc(sale.cashier || S.cashier)}</div><hr>
+      ${sale.lines.map(l => `<div class="row"><span>${l.qty} ${esc(l.name)}</span><span>${fmt(l.qty * l.price)}</span></div>`).join("")}<hr>
+      <div class="row"><span>Subtotal</span><span>${fmt(sale.sub)}</span></div>
+      ${sale.disc ? `<div class="row"><span>Discount ${sale.discount}%</span><span>-${fmt(sale.disc)}</span></div>` : ""}
+      <div class="row"><b>TOTAL LBP</b><b>${fmt(sale.total)}</b></div>
+      ${S.usdRate ? `<div class="row"><span>USD @ ${fmt(S.usdRate)}</span><span>$${(sale.total / S.usdRate).toFixed(2)}</span></div>` : ""}
+      ${sale.method ? `<div class="row"><span>${esc(sale.method)}</span><span>${fmt(sale.received)}</span></div>
+      <div class="row"><span>Change</span><span>${fmt(sale.change)}</span></div>` : ""}
+      <hr><div class="c">Thank you!</div>`;
+  }
+  setTimeout(() => window.print(), 50);
+}
+
+/* ---------- actions ---------- */
+const actions = {
+  edit() {
+    const l = needLine(); if (!l) return;
+    openModal(`<h2>Edit item</h2><div class="body">
+      <div class="field"><label>Note (e.g. no sugar, extra ice)</label><input id="eNote" value="${esc(l.note)}" dir="auto"></div>
+      <div class="field"><label>Name</label><input id="eName" value="${esc(l.name)}" dir="auto"></div>
+      <div class="field"><label>Unit price (LBP)</label><input id="ePrice" type="number" value="${l.price}"></div>
+      <div class="field"><label>Quantity</label><input id="eQty" type="number" value="${l.qty}"></div>
+      </div><div class="foot"><button class="btn" id="eNo">Cancel</button><button class="btn primary" id="eOk">Save</button></div>`);
+    $("eNote").focus();
+    $("eNo").onclick = closeModal;
+    $("eOk").onclick = () => {
+      l.note = $("eNote").value.trim();
+      l.name = $("eName").value.trim() || l.name;
+      l.price = Math.max(0, parseFloat($("ePrice").value) || 0);
+      l.qty = Math.max(1, parseFloat($("eQty").value) || 1);
+      closeModal(); render();
+    };
+  },
+  discount() {
+    const fromPad = takeEntryNumber();
+    const apply = v => {
+      const n = parseFloat(v); if (isNaN(n) || n < 0 || n > 100) return toast("Discount must be 0–100 %");
+      order().discount = n; render(); toast(n ? `Discount ${n}% applied` : "Discount removed");
+    };
+    fromPad != null ? apply(fromPad) : ask("Discount", "Discount percent (0–100)", order().discount || "", apply, "number");
+  },
+  clear() {
+    if (!order().lines.length) return toast("Order is already empty");
+    confirmBox(`Cancel the whole order of ${tableName(S.current)}?`, () => {
+      S.orders[S.current] = { lines: [], discount: 0, openedAt: Date.now(), guests: 1 }; selLine = null; render();
+    }, true);
+  },
+  new() { switchTo(nextKey("A")); toast("New order"); },
+  history() { showHistory(); },
+  stats() { showStats(); },
+  print() {
+    const o = order(); if (!o.lines.length) return toast("Order is empty");
+    printReceipt({ table: S.current, customer: o.customer, lines: o.lines, discount: o.discount, ...totals(o) });
+  },
+  kitchen() {
+    const o = order(); const pending = o.lines.filter(l => !l.sent);
+    if (!pending.length) return toast("Nothing new to send");
+    printReceipt({ table: S.current, lines: pending }, true);
+    pending.forEach(l => l.sent = true); render(); toast(`Sent ${pending.length} item(s) to kitchen`);
+  },
+  keyboard() {
+    ask("Custom item", "Item name", "", name => {
+      if (!name.trim()) return;
+      ask("Custom item", `Price for "${name}" (LBP)`, "", p => {
+        const price = parseFloat(p); if (isNaN(price)) return toast("Invalid price");
+        order().lines.push({ name: name.trim(), price, qty: 1, note: "", sent: false }); selLine = order().lines.length - 1; render();
+      }, "number");
+    });
+  },
+  hold() { showTables(); },
+  split() {
+    const o = order(); if (!o.lines.length) return toast("Order is empty");
+    const t = totals(o);
+    openModal(`<h2>Split bill — LBP ${fmt(t.total)}</h2><div class="body">
+      <div class="field"><label>Split equally between</label><input id="sN" type="number" min="2" value="${o.guests > 1 ? o.guests : 2}"></div>
+      <div class="pay-total" id="sRes"></div>
+      <div class="field" style="margin-top:14px"><label>Or move the selected item to another table</label>
+      <select id="sTo">
+        ${Array.from({ length: TABLE_COUNT }, (_, i) => "T" + (i + 1)).filter(k => k !== S.current).map(k => `<option value="${k}">${tableName(k)}</option>`).join("")}
+      </select></div>
+      </div><div class="foot"><button class="btn" id="sClose">Close</button><button class="btn primary" id="sMove">Move selected item</button></div>`);
+    const upd = () => { const n = Math.max(1, parseInt($("sN").value) || 1); $("sRes").textContent = `${n} × LBP ${fmt(Math.ceil(t.total / n))}`; };
+    $("sN").oninput = upd; upd();
+    $("sClose").onclick = closeModal;
+    $("sMove").onclick = () => {
+      const l = needLine(); if (!l) return;
+      const to = $("sTo").value;
+      order(to).lines.push(l); o.lines.splice(selLine, 1); selLine = null;
+      closeModal(); render(); toast(`Moved to ${tableName(to)}`);
+    };
+  },
+  delivery() {
+    const key = nextKey("D");
+    ask("Delivery", "Customer name / phone / address", "", info => {
+      switchTo(key);
+      order().customer = info.trim();
+      render(); toast("Delivery order started");
+    });
+  },
+  report() {
+    const today = new Date().toDateString();
+    const rows = salesBetween(new Date(), new Date());
+    const by = {}; rows.forEach(s => by[s.method] = (by[s.method] || 0) + s.total);
+    const items = {}; rows.forEach(s => s.lines.forEach(l => items[l.name] = (items[l.name] || 0) + l.qty));
+    const top = Object.entries(items).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const sum = rows.reduce((a, s) => a + s.total, 0);
+    openModal(`<h2>Day report — ${today}</h2><div class="body">
+      <div class="pay-total">LBP ${fmt(sum)}</div>
+      <div class="muted" style="text-align:center;margin-bottom:12px">${rows.length} receipts · ${Object.keys(S.orders).filter(isOpen).length} open orders</div>
+      <table class="list">${Object.entries(by).map(([m, v]) => `<tr><td>${esc(m)}</td><td class="r">${fmt(v)}</td></tr>`).join("")}</table>
+      <div class="muted" style="margin:14px 0 4px">Top items</div>
+      <table class="list">${top.map(([n, q]) => `<tr><td dir="auto" style="text-align:start">${esc(n)}</td><td class="r">${q}</td></tr>`).join("")}</table>
+      </div><div class="foot"><button class="btn danger" id="rReset">Clear all sales</button><button class="btn" id="rClose">Close</button></div>`);
+    $("rClose").onclick = closeModal;
+    $("rReset").onclick = () => confirmBox("Delete ALL saved receipts? This cannot be undone.", () => { S.sales = []; S.receiptNo = 1; render(); }, true);
+  },
+};
+
+/* ---------- dates ---------- */
+const DAY = 86400000;
+function dayStart(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+function toInput(d) { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; }
+function fromInput(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
+function salesBetween(from, to, withVoid) {
+  const a = dayStart(from).getTime(), b = dayStart(to).getTime() + DAY;
+  return S.sales.filter(s => s.at >= a && s.at < b && (withVoid || !s.voided));
+}
+function dateTimeStr(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) + " " + timeStr(ts);
+}
+function catName(id) { const c = S.menu.find(c => c.id === id); return c ? c.name : (id === undefined ? "Custom" : "Other"); }
+const PRESETS = {
+  today: () => [new Date(), new Date()],
+  yesterday: () => { const y = new Date(Date.now() - DAY); return [y, y]; },
+  week: () => [new Date(Date.now() - 6 * DAY), new Date()],
+  month: () => { const n = new Date(); return [new Date(n.getFullYear(), n.getMonth(), 1), n]; },
+  d30: () => [new Date(Date.now() - 29 * DAY), new Date()],
+  all: () => [S.sales.length ? new Date(S.sales[0].at) : new Date(), new Date()],
+};
+const PRESET_LABELS = { today: "Today", yesterday: "Yesterday", week: "Last 7 days", month: "This month", d30: "Last 30 days", all: "All time" };
+function presetButtons(active) {
+  return `<div class="presets">${Object.keys(PRESETS).map(k =>
+    `<button class="btn ${k === active ? "on" : ""}" data-preset="${k}">${PRESET_LABELS[k]}</button>`).join("")}</div>`;
+}
+function downloadCSV(name, rows) {
+  const csv = "﻿" + rows.map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ---------- history ---------- */
+const H = { preset: "today", from: null, to: null, q: "", method: "", voids: true, open: null };
+function showHistory() {
+  if (!H.from) [H.from, H.to] = PRESETS.today();
+  openModal(`<h2>Sales history</h2><div class="body" id="hBody"></div>
+    <div class="foot"><button class="btn" id="hCsv">⬇ Export CSV</button><button class="btn" id="hClose">Close</button></div>`, true);
+  $("hClose").onclick = closeModal;
+  $("hCsv").onclick = () => {
+    const rows = historyRows();
+    downloadCSV(`sales_${toInput(H.from)}_${toInput(H.to)}.csv`, [
+      ["Receipt", "Date", "Table", "Customer", "Cashier", "Items", "Subtotal", "Discount", "Total", "Method", "Status"],
+      ...rows.map(s => [s.no, new Date(s.at).toLocaleString(), tableName(s.table), s.customer, s.cashier,
+        s.lines.map(l => `${l.qty}x ${l.name}`).join(" | "), s.sub, s.disc, s.total, s.method, s.voided ? "VOID: " + s.voided.reason : "Paid"]),
+    ]);
+  };
+  renderHistory();
+}
+function historyRows() {
+  const q = H.q.trim().toLowerCase();
+  return salesBetween(H.from, H.to, H.voids)
+    .filter(s => !H.method || s.method === H.method)
+    .filter(s => !q || String(s.no) === q || tableName(s.table).toLowerCase().includes(q) ||
+      (s.cashier || "").toLowerCase().includes(q) || (s.customer || "").toLowerCase().includes(q) ||
+      s.lines.some(l => l.name.toLowerCase().includes(q)))
+    .slice().reverse();
+}
+function renderHistory() {
+  const rows = historyRows();
+  const methods = [...new Set(S.sales.map(s => s.method))];
+  const paid = rows.filter(s => !s.voided);
+  $("hBody").innerHTML = `
+    ${presetButtons(H.preset)}
+    <div class="filters">
+      <label>From<input type="date" id="hFrom" value="${toInput(H.from)}"></label>
+      <label>To<input type="date" id="hTo" value="${toInput(H.to)}"></label>
+      <label>Method<select id="hMethod"><option value="">All</option>${methods.map(m => `<option ${m === H.method ? "selected" : ""}>${esc(m)}</option>`).join("")}</select></label>
+      <label style="flex:1;min-width:160px">Search (receipt #, item, table, customer, cashier)<input id="hQ" value="${esc(H.q)}" placeholder="e.g. 12 or أركيلة"></label>
+      <label class="chk"><input type="checkbox" id="hVoids" ${H.voids ? "checked" : ""}> Show voided</label>
+    </div>
+    ${rows.length ? `<table class="list">
+      <tr><th>#</th><th>Date</th><th>Table</th><th>Cashier</th><th class="r">Items</th><th>Method</th><th class="r">Total (LBP)</th><th>Status</th></tr>
+      ${rows.map(s => `
+        <tr class="rc ${s.voided ? "void" : ""} ${H.open === s.no ? "open" : ""}" data-no="${s.no}">
+          <td>${s.no}</td><td>${dateTimeStr(s.at)}</td><td dir="auto" style="text-align:start">${esc(tableName(s.table))}</td>
+          <td>${esc(s.cashier || "")}</td><td class="r">${s.lines.reduce((a, l) => a + l.qty, 0)}</td>
+          <td>${esc(s.method)}</td><td class="r">${fmt(s.total)}</td>
+          <td class="status">${s.voided ? '<span class="pill-s void">VOID</span>' : '<span class="pill-s paid">PAID</span>'}</td>
+        </tr>
+        ${H.open === s.no ? `<tr><td colspan="8" class="detail">
+          ${s.customer ? `<div class="dl"><span>Customer</span><span dir="auto">${esc(s.customer)}</span></div>` : ""}
+          ${s.lines.map(l => `<div class="dl"><span>${l.qty} × <bdi>${esc(l.name)}</bdi> <span class="muted">@ ${fmt(l.price)}</span>${l.note ? ` <span class="muted">— <bdi>${esc(l.note)}</bdi></span>` : ""}</span><span>${fmt(l.qty * l.price)}</span></div>`).join("")}
+          <div class="dl muted"><span>Subtotal</span><span>${fmt(s.sub)}</span></div>
+          ${s.disc ? `<div class="dl muted"><span>Discount ${s.discount}%</span><span>−${fmt(s.disc)}</span></div>` : ""}
+          <div class="dl"><b>Total</b><b>${fmt(s.total)}</b></div>
+          <div class="dl muted"><span>${esc(s.method)} received</span><span>${fmt(s.received)} · change ${fmt(s.change)}</span></div>
+          ${s.voided ? `<div class="dl" style="color:var(--pink)"><span>Voided ${dateTimeStr(s.voided.at)} by ${esc(s.voided.by)}</span><span>${esc(s.voided.reason)}</span></div>` : ""}
+          <div class="acts">
+            <button class="btn" data-reprint="${s.no}">🖨 Reprint</button>
+            ${s.voided ? `<button class="btn" data-unvoid="${s.no}">↺ Restore</button>`
+                       : `<button class="btn danger" data-void="${s.no}">✕ Void receipt</button>`}
+          </div>
+        </td></tr>` : ""}`).join("")}
+    </table>` : `<div class="empty">No receipts in this range.</div>`}
+    <div class="sumbar"><span>${rows.length} receipt(s)${rows.length - paid.length ? ` · ${rows.length - paid.length} voided` : ""}</span>
+      <span>Total paid: <b>LBP ${fmt(paid.reduce((a, s) => a + s.total, 0))}</b></span></div>`;
+
+  const body = $("hBody");
+  body.querySelectorAll("[data-preset]").forEach(b => b.onclick = () => { H.preset = b.dataset.preset; [H.from, H.to] = PRESETS[H.preset](); H.open = null; renderHistory(); });
+  $("hFrom").onchange = e => { if (e.target.value) { H.from = fromInput(e.target.value); H.preset = ""; renderHistory(); } };
+  $("hTo").onchange = e => { if (e.target.value) { H.to = fromInput(e.target.value); H.preset = ""; renderHistory(); } };
+  $("hMethod").onchange = e => { H.method = e.target.value; renderHistory(); };
+  $("hVoids").onchange = e => { H.voids = e.target.checked; renderHistory(); };
+  $("hQ").oninput = e => { H.q = e.target.value; renderHistory(); const n = $("hQ"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
+  body.querySelectorAll("tr.rc").forEach(r => r.onclick = () => { const no = +r.dataset.no; H.open = H.open === no ? null : no; renderHistory(); });
+  body.querySelectorAll("[data-reprint]").forEach(b => b.onclick = () => printReceipt(S.sales.find(s => s.no == b.dataset.reprint)));
+  body.querySelectorAll("[data-void]").forEach(b => b.onclick = () => {
+    const s = S.sales.find(x => x.no == b.dataset.void);
+    ask(`Void receipt #${s.no}`, "Reason (required)", "", reason => {
+      if (!reason.trim()) { toast("A reason is required"); return showHistory(); }
+      s.voided = { at: Date.now(), by: S.cashier, reason: reason.trim() }; save(); render(); showHistory(); toast(`Receipt #${s.no} voided`);
+    });
+  });
+  body.querySelectorAll("[data-unvoid]").forEach(b => b.onclick = () => {
+    const s = S.sales.find(x => x.no == b.dataset.unvoid); delete s.voided; save(); render(); renderHistory();
+  });
+}
+
+/* ---------- statistics ---------- */
+const ST = { preset: "week", from: null, to: null };
+function vbars(data, unit) {
+  if (!data.some(d => d.value)) return `<div class="none">No sales in this range</div>`;
+  const max = Math.max(...data.map(d => d.value));
+  const every = Math.ceil(data.length / 12); // thin out labels when there are many bars
+  return `<div class="vchart"><span class="vmax">${fmt(max)}</span>
+    ${data.map(d => `<div class="vcol" data-tip="${esc(d.label)}\n${unit}${fmt(d.value)}${d.extra ? "\n" + d.extra : ""}">
+      <div class="bar" style="height:${(d.value / max) * 100}%"></div></div>`).join("")}</div>
+    <div class="vlabels">${data.map((d, i) => `<span>${i % every === 0 ? esc(d.short || d.label) : ""}</span>`).join("")}</div>`;
+}
+function hbars(data, valueFmt) {
+  if (!data.length) return `<div class="none">No sales in this range</div>`;
+  const max = Math.max(...data.map(d => d.value)) || 1;
+  return data.map(d => `<div class="hrow" data-tip="${esc(d.tip || d.label)}">
+      <span class="hl" dir="auto" style="text-align:start">${esc(d.label)}</span>
+      <div class="track"><div class="bar" style="width:${(d.value / max) * 100}%"></div></div>
+      <span class="hv">${valueFmt(d)}</span></div>`).join("");
+}
+function showStats() {
+  if (!ST.from) [ST.from, ST.to] = PRESETS.week();
+  openModal(`<h2>Statistics</h2><div class="body" id="stBody"></div>
+    <div class="foot"><button class="btn" id="stCsv">⬇ Export items CSV</button><button class="btn" id="stClose">Close</button></div>`, true);
+  $("stClose").onclick = closeModal;
+  renderStats();
+}
+function renderStats() {
+  const sales = salesBetween(ST.from, ST.to);
+  const voided = salesBetween(ST.from, ST.to, true).filter(s => s.voided);
+  const revenue = sales.reduce((a, s) => a + s.total, 0);
+  const itemsSold = sales.reduce((a, s) => a + s.lines.reduce((b, l) => b + l.qty, 0), 0);
+  const discounts = sales.reduce((a, s) => a + (s.disc || 0), 0);
+  const days = Math.round((dayStart(ST.to) - dayStart(ST.from)) / DAY) + 1;
+
+  // previous period of the same length, for comparison
+  const prev = salesBetween(new Date(dayStart(ST.from) - days * DAY), new Date(dayStart(ST.from) - DAY));
+  const prevRev = prev.reduce((a, s) => a + s.total, 0);
+  const delta = prevRev ? Math.round((revenue - prevRev) / prevRev * 100) : null;
+
+  // revenue over time: per day, or per month for long ranges
+  let timeData = [];
+  if (days <= 62) {
+    for (let i = 0; i < days; i++) {
+      const d = new Date(dayStart(ST.from).getTime() + i * DAY);
+      const rs = sales.filter(s => dayStart(s.at).getTime() === d.getTime());
+      timeData.push({ label: d.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short" }),
+        short: days <= 8 ? d.toLocaleDateString("en-GB", { weekday: "short" }) : String(d.getDate()),
+        value: rs.reduce((a, s) => a + s.total, 0), extra: `${rs.length} receipt(s)` });
+    }
+  } else {
+    const m = new Map();
+    sales.forEach(s => { const d = new Date(s.at); const k = d.getFullYear() * 12 + d.getMonth(); m.set(k, (m.get(k) || 0) + s.total); });
+    const start = ST.from.getFullYear() * 12 + ST.from.getMonth(), end = ST.to.getFullYear() * 12 + ST.to.getMonth();
+    for (let k = start; k <= end; k++) {
+      const d = new Date(Math.floor(k / 12), k % 12, 1);
+      timeData.push({ label: d.toLocaleDateString("en-GB", { month: "long", year: "numeric" }), short: d.toLocaleDateString("en-GB", { month: "short" }), value: m.get(k) || 0 });
+    }
+  }
+
+  // by hour of day
+  const hours = Array.from({ length: 24 }, (_, h) => ({ label: `${String(h).padStart(2, "0")}:00–${String(h + 1).padStart(2, "0")}:00`, short: String(h), value: 0, n: 0 }));
+  sales.forEach(s => { const h = hours[new Date(s.at).getHours()]; h.value += s.total; h.n++; });
+  hours.forEach(h => h.extra = `${h.n} receipt(s)`);
+  const busiest = hours.reduce((a, h) => h.value > a.value ? h : a, hours[0]);
+
+  // items and categories
+  const items = new Map(), cats = new Map();
+  sales.forEach(s => s.lines.forEach(l => {
+    const v = l.qty * l.price * (1 - (s.discount || 0) / 100);
+    const it = items.get(l.name) || { label: l.name, qty: 0, value: 0, cat: catName(l.cat) };
+    it.qty += l.qty; it.value += v; items.set(l.name, it);
+    const cn = catName(l.cat); const c = cats.get(cn) || { label: cn, qty: 0, value: 0 };
+    c.qty += l.qty; c.value += v; cats.set(cn, c);
+  }));
+  const topQty = [...items.values()].sort((a, b) => b.qty - a.qty).slice(0, 10);
+  const topRev = [...items.values()].sort((a, b) => b.value - a.value).slice(0, 10);
+  const catList = [...cats.values()].sort((a, b) => b.value - a.value);
+
+  const byKey = key => {
+    const m = new Map();
+    sales.forEach(s => { const k = s[key] || "—"; const g = m.get(k) || { label: k, value: 0, n: 0 }; g.value += s.total; g.n++; m.set(k, g); });
+    return [...m.values()].sort((a, b) => b.value - a.value);
+  };
+  const pct = v => revenue ? Math.round(v / revenue * 100) + "%" : "";
+  const money = d => `${fmt(d.value)} <small>${pct(d.value)}</small>`;
+
+  $("stBody").innerHTML = `
+    ${presetButtons(ST.preset)}
+    <div class="filters">
+      <label>From<input type="date" id="stFrom" value="${toInput(ST.from)}"></label>
+      <label>To<input type="date" id="stTo" value="${toInput(ST.to)}"></label>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="k-l">Revenue (LBP)</div><div class="k-v">${fmt(revenue)}</div>
+        <div class="k-s">${delta === null ? "no previous data" : `${delta >= 0 ? "▲" : "▼"} ${Math.abs(delta)}% vs previous ${days} day(s)`}</div></div>
+      <div class="kpi"><div class="k-l">Receipts</div><div class="k-v">${sales.length}</div><div class="k-s">${(sales.length / days).toFixed(1)} per day</div></div>
+      <div class="kpi"><div class="k-l">Average ticket</div><div class="k-v">${fmt(sales.length ? revenue / sales.length : 0)}</div><div class="k-s">LBP per receipt</div></div>
+      <div class="kpi"><div class="k-l">Items sold</div><div class="k-v">${fmt(itemsSold)}</div><div class="k-s">${items.size} different items</div></div>
+      <div class="kpi"><div class="k-l">Discounts given</div><div class="k-v">${fmt(discounts)}</div><div class="k-s">LBP</div></div>
+      <div class="kpi"><div class="k-l">Voided</div><div class="k-v">${voided.length}</div><div class="k-s">LBP ${fmt(voided.reduce((a, s) => a + s.total, 0))}</div></div>
+    </div>
+    <div class="charts">
+      <div class="card full"><h3>Revenue by ${days <= 62 ? "day" : "month"} (LBP)</h3>${vbars(timeData, "LBP ")}</div>
+      <div class="card full"><h3>Revenue by hour of day (LBP)${busiest.value ? ` — busiest ${busiest.label}` : ""}</h3>${vbars(hours, "LBP ")}</div>
+      <div class="card"><h3>Top items by quantity</h3>${hbars(topQty.map(d => ({ ...d, value: d.qty, tip: `${d.label}\n${d.qty} sold · LBP ${fmt(d.value)}` })), d => fmt(d.value))}</div>
+      <div class="card"><h3>Top items by revenue (LBP)</h3>${hbars(topRev.map(d => ({ ...d, tip: `${d.label}\n${d.qty} sold · LBP ${fmt(d.value)}` })), money)}</div>
+      <div class="card"><h3>Sales by category (LBP)</h3>${hbars(catList.map(d => ({ ...d, tip: `${d.label}\n${d.qty} items · LBP ${fmt(d.value)}` })), money)}</div>
+      <div class="card"><h3>Payment methods (LBP)</h3>${hbars(byKey("method").map(d => ({ ...d, tip: `${d.label}\n${d.n} receipt(s)` })), money)}</div>
+      <div class="card"><h3>By cashier (LBP)</h3>${hbars(byKey("cashier").map(d => ({ ...d, tip: `${d.label}\n${d.n} receipt(s)` })), money)}</div>
+    </div>`;
+
+  const body = $("stBody");
+  body.querySelectorAll("[data-preset]").forEach(b => b.onclick = () => { ST.preset = b.dataset.preset; [ST.from, ST.to] = PRESETS[ST.preset](); renderStats(); });
+  $("stFrom").onchange = e => { if (e.target.value) { ST.from = fromInput(e.target.value); ST.preset = ""; renderStats(); } };
+  $("stTo").onchange = e => { if (e.target.value) { ST.to = fromInput(e.target.value); ST.preset = ""; renderStats(); } };
+  $("stCsv").onclick = () => downloadCSV(`items_${toInput(ST.from)}_${toInput(ST.to)}.csv`, [
+    ["Item", "Category", "Quantity", "Revenue LBP"],
+    ...[...items.values()].sort((a, b) => b.value - a.value).map(d => [d.label, d.cat, d.qty, Math.round(d.value)]),
+  ]);
+}
+
+/* ---------- menu manager ---------- */
+function showMenuManager() {
+  openModal(`<h2>Menu & settings</h2><div class="body">
+    <div class="field"><label>Shop name</label><input id="mShop" value="${esc(S.shop)}" dir="auto"></div>
+    <div class="field"><label>Cashier</label><input id="mCashier" value="${esc(S.cashier)}" dir="auto"></div>
+    <div class="field"><label>Menu — a category line starts with # (optionally "| icon"), then one "item name = price" per line</label>
+      <textarea id="mText" rows="14" dir="auto" style="font-size:14px">${esc(
+        S.menu.map(c => `# ${c.name} | ${catIcon(c)}\n` + c.items.map(i => `${i.name} = ${i.price}`).join("\n")).join("\n\n"))}</textarea></div>
+    </div><div class="foot"><button class="btn danger" id="mReset">Reset default menu</button><button class="btn" id="mNo">Cancel</button><button class="btn primary" id="mOk">Save</button></div>`);
+  $("mNo").onclick = closeModal;
+  $("mReset").onclick = () => confirmBox("Reset menu to default?", () => { S.menu = blankState().menu; curCat = "all"; render(); });
+  $("mOk").onclick = () => {
+    const menu = []; let cur = null;
+    $("mText").value.split("\n").forEach(raw => {
+      const line = raw.trim(); if (!line) return;
+      if (line.startsWith("#")) {
+        const [name, icon] = line.slice(1).split("|").map(s => s.trim());
+        const old = S.menu.find(c => c.name === name); // keep the id so past sales keep their category
+        cur = { id: old ? old.id : "c" + menu.length + "_" + Date.now().toString(36), name, icon: icon || undefined, items: [] };
+        menu.push(cur); return;
+      }
+      const m = line.match(/^(.*?)\s*=\s*([\d.,]+)$/);
+      if (m && cur) cur.items.push({ name: m[1].trim(), price: parseFloat(m[2].replace(/,/g, "")) });
+    });
+    if (!menu.length) return toast("Menu is empty — not saved");
+    S.menu = menu; S.shop = $("mShop").value.trim() || S.shop; S.cashier = $("mCashier").value.trim() || S.cashier;
+    if (curCat !== "all" && !menu.some(c => c.id === curCat)) curCat = "all";
+    closeModal(); render(); toast("Menu saved");
+  };
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click", e => {
+  const a = e.target.closest("[data-act]");
+  if (a && !a.closest(".modal")) actions[a.dataset.act]();
+});
+$("menuBtn").onclick = showMenuManager;
+$("userBtn").onclick = () => ask("Change cashier", "Cashier name", S.cashier, v => { if (v.trim()) { S.cashier = v.trim(); render(); } });
+$("custBtn").onclick = () => {
+  const o = order();
+  openModal(`<h2>Customer — ${esc(tableName(S.current))}</h2><div class="body">
+    <div class="field"><label>Customer name / phone</label><input id="cuName" value="${esc(o.customer)}" dir="auto"></div>
+    <div class="field"><label>Guests</label><input id="cuGuests" type="number" min="1" value="${o.guests || 1}"></div>
+    </div><div class="foot"><button class="btn" id="cuNo">Cancel</button><button class="btn primary" id="cuOk">Save</button></div>`);
+  $("cuName").focus();
+  $("cuNo").onclick = closeModal;
+  $("cuOk").onclick = () => { o.customer = $("cuName").value.trim(); o.guests = parseInt($("cuGuests").value) || 1; closeModal(); render(); };
+};
+$("completeBtn").onclick = () => showPay(takeEntryNumber());
+
+$("tabs").addEventListener("click", e => { const t = e.target.closest("[data-tab]"); if (t) switchTo(t.dataset.tab); });
+$("cats").addEventListener("click", e => {
+  const c = e.target.closest("[data-cat]"); if (!c) return;
+  curCat = c.dataset.cat; prodQuery = ""; $("prodSearch").value = ""; renderCats(); renderProducts();
+});
+$("catL").onclick = () => $("cats").scrollBy({ left: -320 });
+$("catR").onclick = () => $("cats").scrollBy({ left: 320 });
+$("catSearch").oninput = e => { catQuery = e.target.value; renderCats(); };
+$("prodSearch").oninput = e => { prodQuery = e.target.value; renderProducts(); };
+$("prodClear").onclick = () => { prodQuery = ""; $("prodSearch").value = ""; renderProducts(); };
+$("products").addEventListener("click", e => {
+  const a = e.target.closest("[data-add]"); if (!a) return;
+  const [cid, idx] = a.dataset.add.split(":"); addItem(cid, +idx);
+});
+$("rLines").addEventListener("click", e => {
+  const st = e.target.closest("[data-step]"); if (st) return stepLine(+st.dataset.i, +st.dataset.step);
+  const d = e.target.closest("[data-del]"); if (d) return removeLine(+d.dataset.del);
+  const row = e.target.closest(".rl"); if (!row) return;
+  const i = +row.dataset.i;
+  if (selLine === i && !entry) return actions.edit(); // second tap opens the edit / note dialog
+  selLine = i; render();
+});
+
+function keypad(k) {
+  if (/^\d+$/.test(k)) { if (entry.length < 12) entry = (entry === "0" ? "" : entry) + k; }
+  else if (k === ".") { if (!entry.includes(".")) entry = (entry || "0") + "."; }
+  else if (k === "C") entry = "";
+  else if (k === "back") entry = entry.slice(0, -1);
+  else if (k === "+") return changeQty(1);
+  else if (k === "-") return changeQty(-1);
+  else if (k === "%") return actions.discount();
+  else if (k === "=") return showPay(takeEntryNumber());
+  else if (k === "x") {
+    const l = needLine(); const n = takeEntryNumber();
+    if (l && n != null) { if (n <= 0) { removeLine(selLine); return; } l.qty = n; }
+    else if (l) toast("Type the quantity first, then press ×");
+  }
+  render();
+}
+document.querySelectorAll(".keypad [data-k]").forEach(b => b.addEventListener("click", () => keypad(b.dataset.k)));
+
+// physical keyboard support
+document.addEventListener("keydown", e => {
+  if ($("overlay").classList.contains("open")) { if (e.key === "Escape") closeModal(); return; }
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
+  if (/^\d$/.test(e.key)) keypad(e.key);
+  else if (e.key === ".") keypad(".");
+  else if (e.key === "Backspace") keypad("back");
+  else if (e.key === "Escape") keypad("C");
+  else if (e.key === "+") keypad("+");
+  else if (e.key === "-") keypad("-");
+  else if (e.key === "*" || e.key === "x") keypad("x");
+  else if (e.key === "%") keypad("%");
+  else if (e.key === "Enter" || e.key === "=") keypad("=");
+  else if (e.key === "Delete" && selLine != null) removeLine(selLine);
+});
+
+function tick() {
+  const d = new Date();
+  $("clock").textContent = d.toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "short", year: "numeric" }) +
+    "  ·  " + d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+setInterval(tick, 10000); tick();
+order(); render();
+</script>
+</body>
+</html>

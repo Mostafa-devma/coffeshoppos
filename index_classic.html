@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Coffee Shop POS</title>
+<style>
+  :root {
+    --bg: #eef1f6;
+    --panel: #ffffff;
+    --border: #cfd6e2;
+    --tile: #1f3c72;
+    --tile-hover: #2a4d8f;
+    --tile-active: #6c3cf0;
+    --accent: #3b6fd8;
+    --row-sel: #e58fb4;
+    --text: #1d2433;
+    --muted: #6b7489;
+    --danger: #e0533d;
+    --ok: #1f9d55;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif; font-size: 14px;
+    overflow: hidden;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  .ar { font-family: "Segoe UI", Tahoma, "Arabic Typesetting", sans-serif; direction: rtl; }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    height: 34px; display: flex; align-items: center; gap: 12px; padding: 0 10px;
+    background: #fff; border-bottom: 1px solid var(--border);
+  }
+  .topbar .menu-btn {
+    width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--accent);
+    background: #fff; color: var(--accent); font-weight: bold; line-height: 1; padding: 0;
+  }
+  .topbar .clock { font-size: 13px; color: var(--muted); }
+  .topbar .spacer { flex: 1; }
+  .topbar .badge {
+    display: flex; align-items: center; gap: 4px; font-size: 13px;
+  }
+  .topbar .dot { width: 14px; height: 14px; border-radius: 50%; background: #1d2433; }
+  .topbar .sq { width: 18px; height: 18px; border-radius: 3px; background: var(--tile); color: #fff; font-size: 11px; display: grid; place-items: center; }
+  .topbar .exit-mini { background: var(--danger); color: #fff; border: 0; border-radius: 3px; padding: 3px 8px; font-size: 11px; }
+
+  /* ---------- main layout ---------- */
+  .app {
+    height: calc(100% - 34px - 62px);
+    display: grid; grid-template-columns: 58px minmax(300px, 34%) 1fr;
+  }
+  .sidebar {
+    background: #fff; border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 4px 0;
+  }
+  .side-btn {
+    background: none; border: 0; padding: 8px 0 6px; display: flex; flex-direction: column;
+    align-items: center; gap: 2px; font-size: 10px; color: var(--muted);
+  }
+  .side-btn .ic { font-size: 20px; line-height: 1; color: var(--accent); }
+  .side-btn:active { background: #e7edf8; }
+  .side-btn.danger .ic { color: var(--danger); }
+
+  /* ---------- order panel ---------- */
+  .order {
+    background: #fff; border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; min-width: 0;
+  }
+  .order-head {
+    display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--border);
+  }
+  .table-btn {
+    flex: 1; display: flex; align-items: center; gap: 8px; background: #f4f6fb;
+    border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 14px; font-weight: 600;
+  }
+  .icon-btn {
+    width: 36px; height: 34px; border-radius: 6px; border: 1px solid var(--border); background: #f4f6fb; font-size: 18px;
+  }
+  .lines-head, .line {
+    display: grid; grid-template-columns: 44px 1fr 96px; align-items: center;
+  }
+  .lines-head { font-size: 12px; color: var(--muted); padding: 4px 10px; border-bottom: 1px solid var(--border); }
+  .lines-head div:last-child, .line .val { text-align: right; }
+  .lines { flex: 1; overflow-y: auto; }
+  .line { padding: 7px 10px; border-bottom: 1px solid #eef0f4; cursor: pointer; }
+  .line.sel { background: var(--row-sel); color: #fff; }
+  .line .qty { font-weight: 700; }
+  .line .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .line .note { font-size: 11px; opacity: .8; display: block; }
+  .line .sent { font-size: 10px; color: var(--ok); margin-left: 4px; }
+  .line.sel .sent { color: #fff; }
+  .empty { padding: 30px; text-align: center; color: var(--muted); }
+
+  .summary {
+    display: flex; justify-content: space-between; align-items: flex-end; padding: 6px 10px;
+    border-top: 1px solid var(--border); font-size: 11px; color: var(--muted);
+  }
+  .summary .total { font-size: 18px; font-weight: 700; color: var(--text); }
+  .summary .disc { color: var(--danger); }
+
+  .entry {
+    display: flex; align-items: center; gap: 8px; padding: 4px 10px; border-top: 1px solid var(--border);
+  }
+  .entry .display {
+    flex: 1; height: 30px; border: 1px solid var(--border); border-radius: 4px; padding: 0 8px;
+    display: flex; align-items: center; justify-content: flex-end; font-size: 16px; font-weight: 600; background: #fafbfd;
+  }
+  .entry .mode { font-size: 11px; color: var(--muted); min-width: 60px; }
+
+  .numpad {
+    display: grid; grid-template-columns: repeat(3, 1fr) 60px 58px; gap: 4px; padding: 6px 10px 8px;
+  }
+  .key {
+    height: 44px; border: 1px solid var(--border); border-radius: 6px; background: #fff;
+    font-size: 20px; color: var(--text);
+  }
+  .key:active { background: #e7edf8; }
+  .key.small { font-size: 13px; font-weight: 600; }
+  .key.op { color: var(--danger); font-size: 26px; font-weight: 700; }
+  .key.pay {
+    grid-column: 5; grid-row: 1 / span 4; height: auto; background: var(--accent); color: #fff;
+    font-weight: 800; font-size: 22px; letter-spacing: 4px; writing-mode: vertical-rl; transform: rotate(180deg);
+    border: 0;
+  }
+  .key.pay:active { background: #2c58b3; }
+
+  /* ---------- catalog ---------- */
+  .catalog { display: flex; flex-direction: column; padding: 10px; overflow: hidden; min-width: 0; }
+  .crumbs { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; min-height: 38px; }
+  .crumb-tile {
+    background: var(--tile); color: #fff; border: 0; border-radius: 4px; padding: 10px 26px; font-size: 14px;
+  }
+  .crumb-tile.back { background: #5c6b88; }
+  .search-box {
+    flex: 1; height: 38px; border: 1px solid var(--border); border-radius: 6px; padding: 0 12px; font-size: 15px;
+    user-select: text;
+  }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px;
+    overflow-y: auto; align-content: start; padding-bottom: 8px;
+  }
+  .tile {
+    position: relative; height: 96px; border: 0; border-radius: 6px; background: var(--tile); color: #fff;
+    display: flex; flex-direction: column; justify-content: space-between; align-items: stretch; padding: 6px;
+    box-shadow: 0 2px 0 rgba(0,0,0,.15);
+  }
+  .tile:hover { background: var(--tile-hover); }
+  .tile:active, .tile.active { background: var(--tile-active); }
+  .tile .t-name { font-size: 13px; line-height: 1.15; text-align: right; max-height: 46px; overflow: hidden; }
+  .tile .t-name.en { text-align: left; }
+  .tile .folder {
+    align-self: center; width: 46px; height: 32px; position: relative; margin-bottom: 2px;
+  }
+  .folder::before {
+    content: ""; position: absolute; left: 0; top: 0; width: 20px; height: 8px; background: #e2b965; border-radius: 3px 3px 0 0;
+  }
+  .folder::after {
+    content: ""; position: absolute; left: 0; top: 5px; right: 0; bottom: 0; background: linear-gradient(#f6d58a, #e8b95c); border-radius: 2px 4px 4px 4px;
+  }
+  .tile.item { background: #fff; color: var(--text); border: 2px solid var(--tile); }
+  .tile.item:hover { background: #f1f5fc; }
+  .tile.item:active { background: #dfe7f7; }
+  .tile.item .t-name { text-align: center; font-weight: 600; }
+  .tile.item .t-price { text-align: center; font-size: 12px; color: var(--accent); font-weight: 700; }
+  .tile.item .t-cat { font-size: 10px; color: var(--muted); text-align: center; }
+
+  /* ---------- bottom bar ---------- */
+  .bottombar {
+    height: 62px; background: #fff; border-top: 1px solid var(--border);
+    display: flex; align-items: stretch;
+  }
+  .bb {
+    flex: 1; background: none; border: 0; border-right: 1px solid #eef0f4;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    font-size: 11px; color: var(--muted);
+  }
+  .bb .ic { font-size: 20px; line-height: 1; }
+  .bb:active { background: #e7edf8; }
+  .bb.exit { background: var(--danger); color: #fff; flex: 0 0 70px; border: 0; }
+
+  /* ---------- modal ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(15, 22, 40, .55); display: none;
+    align-items: center; justify-content: center; z-index: 50; padding: 16px;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: 10px; width: min(560px, 100%); max-height: 90vh; display: flex; flex-direction: column;
+    box-shadow: 0 20px 50px rgba(0,0,0,.3);
+  }
+  .modal h2 { margin: 0; padding: 14px 18px; font-size: 17px; border-bottom: 1px solid var(--border); }
+  .modal .body { padding: 16px 18px; overflow-y: auto; }
+  .modal .foot { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+  .btn {
+    border: 1px solid var(--border); background: #fff; border-radius: 6px; padding: 10px 18px; font-size: 14px; font-weight: 600;
+  }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.ok { background: var(--ok); color: #fff; border-color: var(--ok); }
+  .btn.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+  .field label { font-size: 12px; color: var(--muted); }
+  .field input, .field select, .field textarea {
+    font: inherit; font-size: 16px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 6px; user-select: text;
+  }
+  .pay-total { font-size: 30px; font-weight: 800; text-align: center; margin-bottom: 6px; }
+  .pay-change { font-size: 20px; text-align: center; color: var(--ok); font-weight: 700; min-height: 28px; }
+  .quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+  .quick .btn { padding: 10px 4px; }
+  .tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; }
+  .tables .tbtn {
+    height: 70px; border-radius: 8px; border: 2px solid var(--border); background: #f4f6fb; font-weight: 700; font-size: 15px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  }
+  .tables .tbtn small { font-size: 11px; font-weight: 600; }
+  .tables .tbtn.busy { background: #fde7d9; border-color: #f0a36b; }
+  .tables .tbtn.cur { border-color: var(--tile-active); box-shadow: 0 0 0 2px var(--tile-active) inset; }
+  table.list { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.list th, table.list td { padding: 7px 6px; border-bottom: 1px solid #eef0f4; text-align: left; }
+  table.list td.r, table.list th.r { text-align: right; }
+  .muted { color: var(--muted); }
+
+  /* ---------- history & statistics ---------- */
+  .modal.wide { width: min(1000px, 100%); height: 92vh; max-height: 92vh; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-bottom: 12px; }
+  .filters label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); }
+  .filters input, .filters select { font: inherit; font-size: 14px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 6px; user-select: text; }
+  .filters .chk { flex-direction: row; align-items: center; gap: 6px; font-size: 13px; color: var(--text); padding-bottom: 8px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .presets .btn { padding: 7px 12px; font-size: 13px; }
+  .presets .btn.on { background: var(--tile); color: #fff; border-color: var(--tile); }
+  table.list tr.rc { cursor: pointer; }
+  table.list tr.rc:hover { background: #f4f6fb; }
+  table.list tr.open { background: #eef3fd; }
+  table.list tr.void td { color: var(--muted); text-decoration: line-through; }
+  table.list tr.void td.status { text-decoration: none; }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+  .pill.paid { background: #e3f4ea; color: var(--ok); }
+  .pill.void { background: #fde5e1; color: var(--danger); }
+  .detail { background: #f8fafd; padding: 10px 14px; }
+  .detail .dl { display: flex; justify-content: space-between; padding: 3px 0; font-size: 13px; }
+  .detail .acts { display: flex; gap: 8px; margin-top: 10px; }
+  .detail .acts .btn { padding: 7px 14px; font-size: 13px; }
+  .sumbar { display: flex; justify-content: space-between; font-size: 13px; padding: 8px 2px 0; color: var(--muted); }
+  .sumbar b { color: var(--text); }
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .kpi { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .kpi .k-l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+  .kpi .k-v { font-size: 20px; font-weight: 800; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .kpi .k-s { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .card { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; min-width: 0; }
+  .card.full { grid-column: 1 / -1; }
+  .card h3 { margin: 0 0 10px; font-size: 13px; }
+  .card .none { color: var(--muted); font-size: 13px; padding: 16px 0; text-align: center; }
+  /* vertical bars */
+  .vchart { display: flex; align-items: flex-end; gap: 2px; height: 150px; border-bottom: 1px solid var(--border); position: relative; }
+  .vcol { flex: 1; height: 100%; display: flex; align-items: flex-end; position: relative; min-width: 0; }
+  .vcol .bar { width: 100%; max-width: 34px; margin: 0 auto; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 0; }
+  .vcol:hover .bar { background: var(--tile); }
+  .vlabels { display: flex; gap: 2px; font-size: 10px; color: var(--muted); margin-top: 4px; }
+  .vlabels span { flex: 1; text-align: center; overflow: hidden; white-space: nowrap; min-width: 0; }
+  .vmax { position: absolute; top: -2px; left: 0; font-size: 10px; color: var(--muted); border-top: 1px dashed var(--border); width: 100%; pointer-events: none; }
+  /* horizontal bars */
+  .hrow { display: grid; grid-template-columns: minmax(80px, 38%) 1fr auto; gap: 8px; align-items: center; padding: 4px 0; font-size: 13px; position: relative; }
+  .hrow .hl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hrow .track { height: 12px; }
+  .hrow .bar { height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; min-width: 2px; }
+  .hrow:hover .bar { background: var(--tile); }
+  .hrow .hv { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+  .hrow .hv small { color: var(--muted); font-weight: 400; }
+  /* hover tooltip */
+  [data-tip]:hover::after {
+    content: attr(data-tip); position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%);
+    background: #1d2433; color: #fff; font-size: 12px; padding: 5px 9px; border-radius: 6px; white-space: pre; z-index: 5; pointer-events: none;
+  }
+  .hrow[data-tip]:hover::after { left: 60%; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%); background: #1d2433; color: #fff;
+    padding: 10px 18px; border-radius: 20px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 60;
+  }
+  .toast.show { opacity: 1; }
+
+  /* printable receipt (hidden on screen) */
+  #printArea { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; left: 0; top: 0; width: 72mm; font-family: monospace; font-size: 12px; color: #000; }
+    #printArea .c { text-align: center; }
+    #printArea .row { display: flex; justify-content: space-between; gap: 6px; }
+    #printArea hr { border: 0; border-top: 1px dashed #000; }
+  }
+
+  @media (max-width: 820px) {
+    .app { grid-template-columns: 50px 1fr; grid-template-rows: 55% 45%; }
+    .sidebar { grid-row: 1 / span 2; }
+    .catalog { grid-column: 2; }
+    .bb span { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="menu-btn" id="menuBtn" title="Menu manager">≡</button>
+  <span class="clock" id="clock"></span>
+  <span class="spacer"></span>
+  <span class="badge"><span class="dot"></span><span id="openCount">0</span></span>
+  <span class="badge"><span class="sq" id="sentCount">0</span></span>
+  <button class="exit-mini" id="lockBtn">LOCK</button>
+</div>
+
+<div class="app">
+  <!-- left action column -->
+  <div class="sidebar">
+    <button class="side-btn danger" data-act="delete"><span class="ic">✕</span>Delete</button>
+    <button class="side-btn" data-act="search"><span class="ic">⌕</span>Search</button>
+    <button class="side-btn" data-act="edit"><span class="ic">✎</span>Edit</button>
+    <button class="side-btn" data-act="notes"><span class="ic">💬</span>Notes</button>
+    <button class="side-btn" data-act="discount"><span class="ic">%</span>Disc.</button>
+    <button class="side-btn danger" data-act="clear"><span class="ic">⟲</span>Clear</button>
+  </div>
+
+  <!-- order panel -->
+  <div class="order">
+    <div class="order-head">
+      <button class="table-btn ar" id="tableBtn">👤 <span id="tableLabel"></span></button>
+      <button class="icon-btn" id="customerBtn" title="Customer / guests">👥</button>
+    </div>
+    <div class="lines-head"><div>Qty</div><div>Item</div><div>Value</div></div>
+    <div class="lines" id="lines"></div>
+    <div class="summary">
+      <div>
+        <div id="metaUser"></div>
+        <div class="ar" id="metaTable"></div>
+      </div>
+      <div style="text-align:center">Items<br><b id="itemCount" style="color:var(--text)">0</b></div>
+      <div style="text-align:right">
+        <div class="disc" id="discLine"></div>
+        <div class="total" id="total">LBP 0</div>
+      </div>
+    </div>
+    <div class="entry">
+      <span class="mode" id="entryMode">Qty / Amount</span>
+      <div class="display" id="display">0</div>
+    </div>
+    <div class="numpad">
+      <button class="key small" data-k=".">.</button>
+      <button class="key small" data-k="CE">CE</button>
+      <button class="key small" data-k="QTY">QTY</button>
+      <button class="key op" data-k="-">−</button>
+      <button class="key pay" id="payBtn">PAY</button>
+
+      <button class="key" data-k="1">1</button>
+      <button class="key" data-k="2">2</button>
+      <button class="key" data-k="3">3</button>
+      <button class="key op" data-k="+" style="grid-row: span 2; height:auto">+</button>
+
+      <button class="key" data-k="4">4</button>
+      <button class="key" data-k="5">5</button>
+      <button class="key" data-k="6">6</button>
+
+      <button class="key" data-k="7">7</button>
+      <button class="key" data-k="8">8</button>
+      <button class="key" data-k="9">9</button>
+      <button class="key small" data-k="000">000</button>
+
+      <button class="key" data-k="0" style="grid-column: 2">0</button>
+    </div>
+  </div>
+
+  <!-- catalog -->
+  <div class="catalog">
+    <div class="crumbs" id="crumbs"></div>
+    <div class="grid" id="grid"></div>
+  </div>
+</div>
+
+<div class="bottombar">
+  <button class="bb" data-act="new"><span class="ic">🛒</span><span>New</span></button>
+  <button class="bb" data-act="history"><span class="ic">🧾</span><span id="listLabel">History (0)</span></button>
+  <button class="bb" data-act="stats"><span class="ic">📊</span><span>Statistics</span></button>
+  <button class="bb" data-act="print"><span class="ic">🖨</span><span>Print Receipt</span></button>
+  <button class="bb" data-act="kitchen"><span class="ic">👨‍🍳</span><span>Send To Kitchen</span></button>
+  <button class="bb" data-act="keyboard"><span class="ic">⌨</span><span>Keyboard</span></button>
+  <button class="bb" data-act="hold"><span class="ic">⏸</span><span>Hold/View</span></button>
+  <button class="bb" data-act="split"><span class="ic">✂</span><span>Split</span></button>
+  <button class="bb" data-act="delivery"><span class="ic">🛵</span><span>Delivery</span></button>
+  <button class="bb exit" data-act="report"><span class="ic">⏻</span><span>Close Day</span></button>
+</div>
+
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+<div id="printArea"></div>
+
+<script>
+/* =========================================================
+   DEFAULT MENU — edit freely, or use the ≡ menu manager.
+   Prices are in LBP.
+   ========================================================= */
+const DEFAULT_MENU = [
+  { id: "hot", name: "مشروبات ساخنة", items: [
+    ["إسبريسو", 150000], ["دبل إسبريسو", 220000], ["كابتشينو", 250000], ["لاتيه", 270000],
+    ["نسكافيه", 150000], ["قهوة تركية", 100000], ["شاي", 80000], ["شاي أخضر", 100000],
+    ["هوت شوكولا", 250000], ["زهورات", 100000] ] },
+  { id: "cold", name: "مشروبات باردة", items: [
+    ["مياه صغير", 60000], ["مياه كبير", 100000], ["بيبسي", 100000], ["سفن أب", 100000],
+    ["عصير برتقال", 250000], ["ليموناضة", 200000], ["آيس لاتيه", 300000], ["فرابيه", 350000],
+    ["ميلك شيك", 400000], ["سموذي", 400000] ] },
+  { id: "arg", name: "أراكيل", items: [
+    ["أركيلة تفاحتين", 700000], ["أركيلة عنب", 700000], ["أركيلة ليمون ونعنع", 700000],
+    ["أركيلة بطيخ", 700000], ["أركيلة علكة", 700000], ["أركيلة عجمي", 800000], ["تغيير راس", 300000] ] },
+  { id: "argx", name: "أراكيل خارجي", items: [
+    ["أركيلة خارجي تفاحتين", 900000], ["أركيلة خارجي عنب", 900000], ["أركيلة خارجي مشكل", 900000] ] },
+  { id: "argp", name: "أراكيل فخم", items: [
+    ["أركيلة فاخرة", 1200000], ["أركيلة فاكهة", 1500000] ] },
+  { id: "nuts", name: "بزورات", items: [
+    ["بزورات صغير", 200000], ["بزورات كبير", 400000], ["فستق", 450000], ["كاجو", 600000] ] },
+  { id: "fries", name: "بطاطا", items: [
+    ["بطاطا صغير", 250000], ["بطاطا كبير", 400000], ["بطاطا ودجز", 450000] ] },
+  { id: "smoke", name: "دخان", items: [
+    ["سيدرز", 150000], ["مارلبورو", 200000], ["ونستون", 180000] ] },
+  { id: "snack", name: "سناكات", items: [
+    ["كرواسون", 150000], ["كرواسون شوكولا", 200000], ["كيك", 250000], ["بسكويت", 100000] ] },
+  { id: "saj", name: "صاج", items: [
+    ["صاج زعتر", 150000], ["صاج جبنة", 250000], ["صاج لبنة", 250000], ["صاج نصف ونص", 250000], ["صاج نوتيلا", 300000] ] },
+  { id: "del", name: "Delivery", items: [
+    ["Delivery Fee", 100000], ["Delivery Fee Far", 200000] ] },
+];
+
+/* ---------- state & storage ---------- */
+const STORE_KEY = "coffee_pos_v1";
+const TABLE_COUNT = 24;
+let S = load();
+let selLine = null;      // index of selected line
+let entry = "";          // numpad entry buffer
+let curCat = null;       // opened category id, or "search"
+let searchText = "";
+
+function blankState() {
+  return {
+    menu: DEFAULT_MENU.map(c => ({ id: c.id, name: c.name, items: c.items.map(([n, p]) => ({ name: n, price: p })) })),
+    orders: {},            // key -> { lines: [], discount: 0, openedAt, guests }
+    current: "T8",
+    sales: [],             // closed receipts
+    receiptNo: 1,
+    cashier: "Ali",
+    shop: "Coffee Shop",
+  };
+}
+function load() {
+  try { const s = JSON.parse(localStorage.getItem(STORE_KEY)); if (s && s.menu) return s; } catch (e) {}
+  return blankState();
+}
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} }
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n).toLocaleString("en-US");
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function tableName(key) {
+  if (key.startsWith("T")) return "طاولة رقم " + key.slice(1);
+  if (key.startsWith("D")) return "Delivery #" + key.slice(1);
+  if (key.startsWith("A")) return "Takeaway #" + key.slice(1);
+  return key;
+}
+function order(key = S.current) {
+  if (!S.orders[key]) S.orders[key] = { lines: [], discount: 0, openedAt: Date.now(), guests: 1 };
+  return S.orders[key];
+}
+function subtotal(o) { return o.lines.reduce((s, l) => s + l.price * l.qty, 0); }
+function totals(o) {
+  const sub = subtotal(o);
+  const disc = Math.round(sub * (o.discount || 0) / 100);
+  return { sub, disc, total: sub - disc };
+}
+function isOpen(key) { const o = S.orders[key]; return o && o.lines.length > 0; }
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 1800);
+}
+function timeStr(ts) { const d = new Date(ts); return d.toTimeString().slice(0, 5); }
+
+/* ---------- rendering ---------- */
+function render() {
+  const o = order();
+  const t = totals(o);
+  $("tableLabel").textContent = tableName(S.current);
+  $("metaUser").textContent = `${S.cashier} - (${timeStr(o.openedAt)})`;
+  $("metaTable").textContent = tableName(S.current);
+  $("itemCount").textContent = o.lines.reduce((s, l) => s + l.qty, 0);
+  $("total").textContent = "LBP " + fmt(t.total);
+  $("discLine").textContent = o.discount ? `Disc ${o.discount}% −${fmt(t.disc)}` : "";
+  $("display").textContent = entry || "0";
+
+  const lines = $("lines");
+  if (!o.lines.length) {
+    lines.innerHTML = `<div class="empty">No items yet.<br>Tap a category to start.</div>`;
+    selLine = null;
+  } else {
+    if (selLine != null && selLine >= o.lines.length) selLine = o.lines.length - 1;
+    lines.innerHTML = o.lines.map((l, i) => `
+      <div class="line ${i === selLine ? "sel" : ""}" data-i="${i}">
+        <div class="qty">${l.qty}</div>
+        <div class="name ar" style="text-align:left">${esc(l.name)}${l.sent ? '<span class="sent">✓</span>' : ""}
+          ${l.note ? `<span class="note">✎ ${esc(l.note)}</span>` : ""}</div>
+        <div class="val">${fmt(l.price * l.qty)}</div>
+      </div>`).join("");
+    const el = lines.querySelector(".sel"); if (el) el.scrollIntoView({ block: "nearest" });
+  }
+
+  const openKeys = Object.keys(S.orders).filter(isOpen);
+  $("openCount").textContent = openKeys.length;
+  $("sentCount").textContent = openKeys.filter(k => S.orders[k].lines.some(l => l.sent)).length;
+  const todayN = salesBetween(new Date(), new Date()).length;
+  $("listLabel").textContent = `History (${todayN})`;
+  renderCatalog();
+  save();
+}
+
+function renderCatalog() {
+  const crumbs = $("crumbs"), grid = $("grid");
+  if (curCat === "search") {
+    crumbs.innerHTML = `<button class="crumb-tile back" data-back>◀ Back</button>
+      <input class="search-box" id="searchBox" placeholder="Search items..." value="${esc(searchText)}">`;
+    const q = searchText.trim().toLowerCase();
+    const res = [];
+    S.menu.forEach(c => c.items.forEach((it, idx) => {
+      if (!q || it.name.toLowerCase().includes(q)) res.push({ c, it, idx });
+    }));
+    grid.innerHTML = res.map(({ c, it, idx }) => itemTile(c, it, idx, true)).join("") ||
+      `<div class="muted">No results</div>`;
+    const sb = $("searchBox");
+    sb.oninput = () => { searchText = sb.value; renderCatalog(); const n = $("searchBox"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
+    return;
+  }
+  const cat = S.menu.find(c => c.id === curCat);
+  if (cat) {
+    crumbs.innerHTML = `<button class="crumb-tile back" data-back>◀ Back</button>
+      <button class="crumb-tile ar">${esc(cat.name)}</button>`;
+    grid.innerHTML = cat.items.map((it, idx) => itemTile(cat, it, idx)).join("");
+  } else {
+    crumbs.innerHTML = `<button class="crumb-tile">Menu</button>`;
+    grid.innerHTML = S.menu.map(c => `
+      <button class="tile" data-cat="${c.id}">
+        <div class="t-name ${/[؀-ۿ]/.test(c.name) ? "ar" : "en"}">${esc(c.name)}</div>
+        <div class="folder"></div>
+      </button>`).join("");
+  }
+}
+function itemTile(c, it, idx, showCat) {
+  return `<button class="tile item" data-add="${c.id}:${idx}">
+    <div class="t-name ar">${esc(it.name)}</div>
+    ${showCat ? `<div class="t-cat ar">${esc(c.name)}</div>` : ""}
+    <div class="t-price">${fmt(it.price)}</div>
+  </button>`;
+}
+
+/* ---------- order operations ---------- */
+function takeEntryNumber() {
+  const n = parseFloat(entry); entry = ""; return isNaN(n) ? null : n;
+}
+function addItem(catId, idx) {
+  const cat = S.menu.find(c => c.id === catId); const it = cat.items[idx];
+  const qty = takeEntryNumber() || 1;
+  const o = order();
+  // merge with last identical unsent line without a note
+  const i = o.lines.findIndex(l => l.name === it.name && l.price === it.price && !l.sent && !l.note);
+  if (i >= 0) { o.lines[i].qty += qty; selLine = i; }
+  else { o.lines.push({ name: it.name, price: it.price, qty, note: "", sent: false, cat: catId }); selLine = o.lines.length - 1; }
+  if (!o.openedAt || o.lines.length === 1) o.openedAt = Date.now();
+  render();
+}
+function needLine() {
+  if (selLine == null || !order().lines[selLine]) { toast("Select an item first"); return null; }
+  return order().lines[selLine];
+}
+function changeQty(delta) {
+  const l = needLine(); if (!l) return;
+  const step = takeEntryNumber() || 1;
+  l.qty += delta * step;
+  if (l.qty <= 0) { order().lines.splice(selLine, 1); selLine = null; }
+  render();
+}
+
+/* ---------- modal ---------- */
+function openModal(html, wide) {
+  $("modal").className = "modal" + (wide ? " wide" : "");
+  $("modal").innerHTML = html; $("overlay").classList.add("open");
+}
+function closeModal() { $("overlay").classList.remove("open"); $("modal").innerHTML = ""; $("modal").className = "modal"; }
+$("overlay").addEventListener("click", e => { if (e.target.id === "overlay") closeModal(); });
+function ask(title, label, value, cb, type = "text") {
+  openModal(`<h2>${esc(title)}</h2><div class="body"><div class="field"><label>${esc(label)}</label>
+    <input id="askIn" type="${type}" value="${esc(value ?? "")}"></div></div>
+    <div class="foot"><button class="btn" id="askNo">Cancel</button><button class="btn primary" id="askOk">OK</button></div>`);
+  const inp = $("askIn"); inp.focus(); inp.select();
+  const ok = () => { const v = inp.value; closeModal(); cb(v); };
+  $("askOk").onclick = ok; $("askNo").onclick = closeModal;
+  inp.onkeydown = e => { if (e.key === "Enter") ok(); if (e.key === "Escape") closeModal(); };
+}
+function confirmBox(msg, cb, danger) {
+  openModal(`<h2>Confirm</h2><div class="body">${esc(msg)}</div>
+    <div class="foot"><button class="btn" id="cNo">No</button><button class="btn ${danger ? "danger" : "primary"}" id="cYes">Yes</button></div>`);
+  $("cNo").onclick = closeModal; $("cYes").onclick = () => { closeModal(); cb(); };
+}
+
+/* ---------- tables ---------- */
+function showTables() {
+  const keys = [];
+  for (let i = 1; i <= TABLE_COUNT; i++) keys.push("T" + i);
+  Object.keys(S.orders).filter(k => !k.startsWith("T") && isOpen(k)).forEach(k => keys.push(k));
+  openModal(`<h2>Tables / Open orders</h2><div class="body"><div class="tables">
+    ${keys.map(k => {
+      const o = S.orders[k]; const busy = isOpen(k);
+      const label = k.startsWith("T") ? k.slice(1) : (k.startsWith("D") ? "🛵 " + k.slice(1) : "🥡 " + k.slice(1));
+      return `<button class="tbtn ${busy ? "busy" : ""} ${k === S.current ? "cur" : ""}" data-t="${k}">
+        ${label}<small>${busy ? fmt(totals(o).total) : "free"}</small></button>`;
+    }).join("")}
+    </div></div>
+    <div class="foot"><button class="btn" id="tTake">+ Takeaway</button><button class="btn" id="tClose">Close</button></div>`);
+  $("modal").querySelectorAll("[data-t]").forEach(b => b.onclick = () => switchTo(b.dataset.t));
+  $("tClose").onclick = closeModal;
+  $("tTake").onclick = () => switchTo(nextKey("A"));
+}
+function nextKey(prefix) {
+  let n = 1; while (isOpen(prefix + n)) n++; return prefix + n;
+}
+function switchTo(key) {
+  // drop empty order we are leaving
+  if (!isOpen(S.current)) delete S.orders[S.current];
+  S.current = key; order(key); selLine = null; entry = ""; curCat = null;
+  closeModal(); render();
+}
+
+/* ---------- payment ---------- */
+function showPay(prefill) {
+  const o = order(); const t = totals(o);
+  if (!o.lines.length) return toast("Order is empty");
+  const quicks = [t.total, 500000, 1000000, 2000000, 5000000, 10000000].filter((v, i, a) => a.indexOf(v) === i).slice(0, 8);
+  openModal(`<h2>Payment — ${esc(tableName(S.current))}</h2><div class="body">
+    <div class="muted" style="text-align:center">Total due</div>
+    <div class="pay-total">LBP ${fmt(t.total)}</div>
+    <div class="field"><label>Method</label><select id="pMethod"><option>Cash LBP</option><option>Cash USD</option><option>Card</option><option>Wish / OMT</option></select></div>
+    <div class="field" id="rateField" style="display:none"><label>USD rate (LBP per $)</label><input id="pRate" type="number" value="${S.usdRate || 89500}"></div>
+    <div class="field"><label id="recvLabel">Received</label><input id="pRecv" type="number" value="${prefill || ""}" placeholder="${t.total}"></div>
+    <div class="quick">${quicks.map(q => `<button class="btn" data-q="${q}">${fmt(q)}</button>`).join("")}</div>
+    <div class="pay-change" id="pChange"></div>
+  </div>
+  <div class="foot"><button class="btn" id="pCancel">Cancel</button><button class="btn ok" id="pOk">Confirm & Print</button></div>`);
+  const recv = $("pRecv"), method = $("pMethod"), rate = $("pRate");
+  const received = () => {
+    const v = parseFloat(recv.value) || t.total;
+    return method.value === "Cash USD" ? v * (parseFloat(rate.value) || 1) : v;
+  };
+  const upd = () => {
+    $("rateField").style.display = method.value === "Cash USD" ? "" : "none";
+    $("recvLabel").textContent = method.value === "Cash USD" ? "Received ($)" : "Received (LBP)";
+    const ch = received() - t.total;
+    $("pChange").textContent = ch >= 0 ? `Change: LBP ${fmt(ch)}` : `Missing: LBP ${fmt(-ch)}`;
+    $("pChange").style.color = ch >= 0 ? "var(--ok)" : "var(--danger)";
+  };
+  recv.oninput = upd; method.onchange = upd; rate.oninput = upd;
+  $("modal").querySelectorAll("[data-q]").forEach(b => b.onclick = () => { method.value = "Cash LBP"; recv.value = b.dataset.q; upd(); });
+  upd(); recv.focus();
+  $("pCancel").onclick = closeModal;
+  $("pOk").onclick = () => {
+    const r = received();
+    if (r < t.total) return toast("Received amount is less than total");
+    if (method.value === "Cash USD") S.usdRate = parseFloat(rate.value);
+    const sale = {
+      no: S.receiptNo++, table: S.current, cashier: S.cashier, at: Date.now(),
+      lines: o.lines.map(l => ({ ...l })), discount: o.discount, ...t,
+      method: method.value, received: r, change: r - t.total,
+    };
+    S.sales.push(sale);
+    delete S.orders[S.current];
+    selLine = null; entry = "";
+    closeModal();
+    printReceipt(sale);
+    if (!S.current.startsWith("T")) S.current = "T1";
+    render();
+    toast(`Paid ✓  Change: LBP ${fmt(sale.change)}`);
+  };
+}
+
+/* ---------- printing ---------- */
+function printReceipt(sale, kitchen) {
+  const p = $("printArea");
+  if (kitchen) {
+    p.innerHTML = `<div class="c"><b>KITCHEN / BAR</b></div><div class="c">${esc(tableName(sale.table))}</div>
+      <div class="c">${new Date().toLocaleString()}</div><hr>
+      ${sale.lines.map(l => `<div class="row"><b>${l.qty} x</b><span style="flex:1">${esc(l.name)}${l.note ? "<br>  * " + esc(l.note) : ""}</span></div>`).join("")}<hr>`;
+  } else {
+    p.innerHTML = `<div class="c"><b>${esc(S.shop)}</b></div>
+      <div class="c">${sale.no ? "Receipt #" + sale.no : "PRE-BILL"} — ${esc(tableName(sale.table))}</div>
+      <div class="c">${new Date(sale.at || Date.now()).toLocaleString()} — ${esc(sale.cashier || S.cashier)}</div><hr>
+      ${sale.lines.map(l => `<div class="row"><span>${l.qty} ${esc(l.name)}</span><span>${fmt(l.qty * l.price)}</span></div>`).join("")}<hr>
+      <div class="row"><span>Subtotal</span><span>${fmt(sale.sub)}</span></div>
+      ${sale.disc ? `<div class="row"><span>Discount ${sale.discount}%</span><span>-${fmt(sale.disc)}</span></div>` : ""}
+      <div class="row"><b>TOTAL LBP</b><b>${fmt(sale.total)}</b></div>
+      ${S.usdRate ? `<div class="row"><span>USD @ ${fmt(S.usdRate)}</span><span>$${(sale.total / S.usdRate).toFixed(2)}</span></div>` : ""}
+      ${sale.method ? `<div class="row"><span>${esc(sale.method)}</span><span>${fmt(sale.received)}</span></div>
+      <div class="row"><span>Change</span><span>${fmt(sale.change)}</span></div>` : ""}
+      <hr><div class="c">Thank you!</div>`;
+  }
+  setTimeout(() => window.print(), 50);
+}
+
+/* ---------- actions ---------- */
+const actions = {
+  delete() {
+    const l = needLine(); if (!l) return;
+    const doIt = () => { order().lines.splice(selLine, 1); selLine = null; render(); };
+    l.sent ? confirmBox(`"${l.name}" was already sent to kitchen. Delete anyway?`, doIt, true) : doIt();
+  },
+  search() { curCat = "search"; searchText = ""; renderCatalog(); $("searchBox").focus(); },
+  edit() {
+    const l = needLine(); if (!l) return;
+    openModal(`<h2>Edit line</h2><div class="body">
+      <div class="field"><label>Name</label><input id="eName" value="${esc(l.name)}"></div>
+      <div class="field"><label>Unit price (LBP)</label><input id="ePrice" type="number" value="${l.price}"></div>
+      <div class="field"><label>Quantity</label><input id="eQty" type="number" value="${l.qty}"></div>
+      </div><div class="foot"><button class="btn" id="eNo">Cancel</button><button class="btn primary" id="eOk">Save</button></div>`);
+    $("eNo").onclick = closeModal;
+    $("eOk").onclick = () => {
+      l.name = $("eName").value || l.name;
+      l.price = Math.max(0, parseFloat($("ePrice").value) || 0);
+      l.qty = Math.max(1, parseFloat($("eQty").value) || 1);
+      closeModal(); render();
+    };
+  },
+  notes() {
+    const l = needLine(); if (!l) return;
+    ask("Notes", `Note for "${l.name}" (e.g. no sugar, extra ice)`, l.note, v => { l.note = v.trim(); render(); });
+  },
+  discount() {
+    const fromPad = takeEntryNumber();
+    const apply = v => {
+      const n = parseFloat(v); if (isNaN(n) || n < 0 || n > 100) return toast("Discount must be 0–100 %");
+      order().discount = n; render(); toast(n ? `Discount ${n}% applied` : "Discount removed");
+    };
+    fromPad != null ? apply(fromPad) : ask("Discount", "Discount percent (0–100)", order().discount || "", apply, "number");
+  },
+  clear() {
+    if (!order().lines.length) return;
+    confirmBox(`Clear the whole order of ${tableName(S.current)}?`, () => {
+      S.orders[S.current] = { lines: [], discount: 0, openedAt: Date.now(), guests: 1 }; selLine = null; render();
+    }, true);
+  },
+  new() { switchTo(nextKey("A")); toast("New takeaway order"); },
+  history() { showHistory(); },
+  stats() { showStats(); },
+  print() {
+    const o = order(); if (!o.lines.length) return toast("Order is empty");
+    printReceipt({ table: S.current, lines: o.lines, discount: o.discount, ...totals(o) });
+  },
+  kitchen() {
+    const o = order(); const pending = o.lines.filter(l => !l.sent);
+    if (!pending.length) return toast("Nothing new to send");
+    printReceipt({ table: S.current, lines: pending }, true);
+    pending.forEach(l => l.sent = true); render(); toast(`Sent ${pending.length} item(s) to kitchen`);
+  },
+  keyboard() {
+    ask("Custom item", "Item name", "", name => {
+      if (!name.trim()) return;
+      ask("Custom item", `Price for "${name}" (LBP)`, "", p => {
+        const price = parseFloat(p); if (isNaN(price)) return toast("Invalid price");
+        order().lines.push({ name: name.trim(), price, qty: 1, note: "", sent: false }); selLine = order().lines.length - 1; render();
+      }, "number");
+    });
+  },
+  hold() { showTables(); },
+  split() {
+    const o = order(); if (!o.lines.length) return toast("Order is empty");
+    const t = totals(o);
+    openModal(`<h2>Split bill — LBP ${fmt(t.total)}</h2><div class="body">
+      <div class="field"><label>Split equally between</label><input id="sN" type="number" min="2" value="${o.guests > 1 ? o.guests : 2}"></div>
+      <div class="pay-total" id="sRes"></div>
+      <div class="muted" style="margin:12px 0 6px">Or move the selected item to another table:</div>
+      <select id="sTo" class="field" style="width:100%;padding:9px;font-size:15px">
+        ${Array.from({ length: TABLE_COUNT }, (_, i) => "T" + (i + 1)).filter(k => k !== S.current).map(k => `<option value="${k}">${tableName(k)}</option>`).join("")}
+      </select>
+      </div><div class="foot"><button class="btn" id="sClose">Close</button><button class="btn primary" id="sMove">Move selected item</button></div>`);
+    const upd = () => { const n = Math.max(1, parseInt($("sN").value) || 1); $("sRes").textContent = `${n} × LBP ${fmt(Math.ceil(t.total / n))}`; };
+    $("sN").oninput = upd; upd();
+    $("sClose").onclick = closeModal;
+    $("sMove").onclick = () => {
+      const l = needLine(); if (!l) return;
+      const to = $("sTo").value;
+      order(to).lines.push(l); o.lines.splice(selLine, 1); selLine = null;
+      closeModal(); render(); toast(`Moved to ${tableName(to)}`);
+    };
+  },
+  delivery() {
+    const key = nextKey("D");
+    ask("Delivery", "Customer name / phone / address", "", info => {
+      switchTo(key);
+      order().customer = info;
+      toast("Delivery order started");
+    });
+  },
+  report() {
+    const today = new Date().toDateString();
+    const rows = salesBetween(new Date(), new Date());
+    const by = {}; rows.forEach(s => by[s.method] = (by[s.method] || 0) + s.total);
+    const items = {}; rows.forEach(s => s.lines.forEach(l => items[l.name] = (items[l.name] || 0) + l.qty));
+    const top = Object.entries(items).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const sum = rows.reduce((a, s) => a + s.total, 0);
+    openModal(`<h2>Day report — ${today}</h2><div class="body">
+      <div class="pay-total">LBP ${fmt(sum)}</div>
+      <div class="muted" style="text-align:center;margin-bottom:12px">${rows.length} receipts · ${Object.keys(S.orders).filter(isOpen).length} open orders</div>
+      <table class="list">${Object.entries(by).map(([m, v]) => `<tr><td>${esc(m)}</td><td class="r">${fmt(v)}</td></tr>`).join("")}</table>
+      <div class="muted" style="margin:14px 0 4px">Top items</div>
+      <table class="list">${top.map(([n, q]) => `<tr><td class="ar" style="text-align:left">${esc(n)}</td><td class="r">${q}</td></tr>`).join("")}</table>
+      </div><div class="foot"><button class="btn danger" id="rReset">Clear all sales</button><button class="btn" id="rClose">Close</button></div>`);
+    $("rClose").onclick = closeModal;
+    $("rReset").onclick = () => confirmBox("Delete ALL saved receipts? This cannot be undone.", () => { S.sales = []; S.receiptNo = 1; render(); }, true);
+  },
+};
+
+/* ---------- dates ---------- */
+const DAY = 86400000;
+function dayStart(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+function toInput(d) { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; }
+function fromInput(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
+function salesBetween(from, to, withVoid) {
+  const a = dayStart(from).getTime(), b = dayStart(to).getTime() + DAY;
+  return S.sales.filter(s => s.at >= a && s.at < b && (withVoid || !s.voided));
+}
+function dateTimeStr(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) + " " + timeStr(ts);
+}
+function catName(id) { const c = S.menu.find(c => c.id === id); return c ? c.name : (id === undefined ? "Custom" : "Other"); }
+const PRESETS = {
+  today: () => [new Date(), new Date()],
+  yesterday: () => { const y = new Date(Date.now() - DAY); return [y, y]; },
+  week: () => [new Date(Date.now() - 6 * DAY), new Date()],
+  month: () => { const n = new Date(); return [new Date(n.getFullYear(), n.getMonth(), 1), n]; },
+  d30: () => [new Date(Date.now() - 29 * DAY), new Date()],
+  all: () => [S.sales.length ? new Date(S.sales[0].at) : new Date(), new Date()],
+};
+const PRESET_LABELS = { today: "Today", yesterday: "Yesterday", week: "Last 7 days", month: "This month", d30: "Last 30 days", all: "All time" };
+function presetButtons(active) {
+  return `<div class="presets">${Object.keys(PRESETS).map(k =>
+    `<button class="btn ${k === active ? "on" : ""}" data-preset="${k}">${PRESET_LABELS[k]}</button>`).join("")}</div>`;
+}
+function downloadCSV(name, rows) {
+  const csv = "﻿" + rows.map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ---------- history ---------- */
+const H = { preset: "today", from: null, to: null, q: "", method: "", voids: true, open: null };
+function showHistory() {
+  if (!H.from) [H.from, H.to] = PRESETS.today();
+  openModal(`<h2>Sales history</h2><div class="body" id="hBody"></div>
+    <div class="foot"><button class="btn" id="hCsv">⬇ Export CSV</button><button class="btn" id="hClose">Close</button></div>`, true);
+  $("hClose").onclick = closeModal;
+  $("hCsv").onclick = () => {
+    const rows = historyRows();
+    downloadCSV(`sales_${toInput(H.from)}_${toInput(H.to)}.csv`, [
+      ["Receipt", "Date", "Table", "Cashier", "Items", "Subtotal", "Discount", "Total", "Method", "Status"],
+      ...rows.map(s => [s.no, new Date(s.at).toLocaleString(), tableName(s.table), s.cashier,
+        s.lines.map(l => `${l.qty}x ${l.name}`).join(" | "), s.sub, s.disc, s.total, s.method, s.voided ? "VOID: " + s.voided.reason : "Paid"]),
+    ]);
+  };
+  renderHistory();
+}
+function historyRows() {
+  const q = H.q.trim().toLowerCase();
+  return salesBetween(H.from, H.to, H.voids)
+    .filter(s => !H.method || s.method === H.method)
+    .filter(s => !q || String(s.no) === q || tableName(s.table).toLowerCase().includes(q) ||
+      (s.cashier || "").toLowerCase().includes(q) || s.lines.some(l => l.name.toLowerCase().includes(q)))
+    .slice().reverse();
+}
+function renderHistory() {
+  const rows = historyRows();
+  const methods = [...new Set(S.sales.map(s => s.method))];
+  const paid = rows.filter(s => !s.voided);
+  $("hBody").innerHTML = `
+    ${presetButtons(H.preset)}
+    <div class="filters">
+      <label>From<input type="date" id="hFrom" value="${toInput(H.from)}"></label>
+      <label>To<input type="date" id="hTo" value="${toInput(H.to)}"></label>
+      <label>Method<select id="hMethod"><option value="">All</option>${methods.map(m => `<option ${m === H.method ? "selected" : ""}>${esc(m)}</option>`).join("")}</select></label>
+      <label style="flex:1;min-width:160px">Search (receipt #, item, table, cashier)<input id="hQ" value="${esc(H.q)}" placeholder="e.g. 12 or أركيلة"></label>
+      <label class="chk"><input type="checkbox" id="hVoids" ${H.voids ? "checked" : ""}> Show voided</label>
+    </div>
+    ${rows.length ? `<table class="list">
+      <tr><th>#</th><th>Date</th><th>Table</th><th>Cashier</th><th class="r">Items</th><th>Method</th><th class="r">Total (LBP)</th><th>Status</th></tr>
+      ${rows.map(s => `
+        <tr class="rc ${s.voided ? "void" : ""} ${H.open === s.no ? "open" : ""}" data-no="${s.no}">
+          <td>${s.no}</td><td>${dateTimeStr(s.at)}</td><td class="ar" style="text-align:left">${esc(tableName(s.table))}</td>
+          <td>${esc(s.cashier || "")}</td><td class="r">${s.lines.reduce((a, l) => a + l.qty, 0)}</td>
+          <td>${esc(s.method)}</td><td class="r">${fmt(s.total)}</td>
+          <td class="status">${s.voided ? '<span class="pill void">VOID</span>' : '<span class="pill paid">PAID</span>'}</td>
+        </tr>
+        ${H.open === s.no ? `<tr><td colspan="8" class="detail">
+          ${s.lines.map(l => `<div class="dl"><span>${l.qty} × <bdi>${esc(l.name)}</bdi> <span class="muted">@ ${fmt(l.price)}</span>${l.note ? ` <span class="muted">— ${esc(l.note)}</span>` : ""}</span><span>${fmt(l.qty * l.price)}</span></div>`).join("")}
+          <div class="dl muted"><span>Subtotal</span><span>${fmt(s.sub)}</span></div>
+          ${s.disc ? `<div class="dl muted"><span>Discount ${s.discount}%</span><span>−${fmt(s.disc)}</span></div>` : ""}
+          <div class="dl"><b>Total</b><b>${fmt(s.total)}</b></div>
+          <div class="dl muted"><span>${esc(s.method)} received</span><span>${fmt(s.received)} · change ${fmt(s.change)}</span></div>
+          ${s.voided ? `<div class="dl" style="color:var(--danger)"><span>Voided ${dateTimeStr(s.voided.at)} by ${esc(s.voided.by)}</span><span>${esc(s.voided.reason)}</span></div>` : ""}
+          <div class="acts">
+            <button class="btn" data-reprint="${s.no}">🖨 Reprint</button>
+            ${s.voided ? `<button class="btn" data-unvoid="${s.no}">↺ Restore</button>`
+                       : `<button class="btn danger" data-void="${s.no}">✕ Void receipt</button>`}
+          </div>
+        </td></tr>` : ""}`).join("")}
+    </table>` : `<div class="empty">No receipts in this range.</div>`}
+    <div class="sumbar"><span>${rows.length} receipt(s)${rows.length - paid.length ? ` · ${rows.length - paid.length} voided` : ""}</span>
+      <span>Total paid: <b>LBP ${fmt(paid.reduce((a, s) => a + s.total, 0))}</b></span></div>`;
+
+  const body = $("hBody");
+  body.querySelectorAll("[data-preset]").forEach(b => b.onclick = () => { H.preset = b.dataset.preset; [H.from, H.to] = PRESETS[H.preset](); H.open = null; renderHistory(); });
+  $("hFrom").onchange = e => { if (e.target.value) { H.from = fromInput(e.target.value); H.preset = ""; renderHistory(); } };
+  $("hTo").onchange = e => { if (e.target.value) { H.to = fromInput(e.target.value); H.preset = ""; renderHistory(); } };
+  $("hMethod").onchange = e => { H.method = e.target.value; renderHistory(); };
+  $("hVoids").onchange = e => { H.voids = e.target.checked; renderHistory(); };
+  $("hQ").oninput = e => { H.q = e.target.value; renderHistory(); const n = $("hQ"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
+  body.querySelectorAll("tr.rc").forEach(r => r.onclick = () => { const no = +r.dataset.no; H.open = H.open === no ? null : no; renderHistory(); });
+  body.querySelectorAll("[data-reprint]").forEach(b => b.onclick = () => printReceipt(S.sales.find(s => s.no == b.dataset.reprint)));
+  body.querySelectorAll("[data-void]").forEach(b => b.onclick = () => {
+    const s = S.sales.find(x => x.no == b.dataset.void);
+    ask(`Void receipt #${s.no}`, "Reason (required)", "", reason => {
+      if (!reason.trim()) { toast("A reason is required"); return showHistory(); }
+      s.voided = { at: Date.now(), by: S.cashier, reason: reason.trim() }; save(); render(); showHistory(); toast(`Receipt #${s.no} voided`);
+    });
+  });
+  body.querySelectorAll("[data-unvoid]").forEach(b => b.onclick = () => {
+    const s = S.sales.find(x => x.no == b.dataset.unvoid); delete s.voided; save(); render(); renderHistory();
+  });
+}
+
+/* ---------- statistics ---------- */
+const ST = { preset: "week", from: null, to: null };
+function vbars(data, unit) {
+  if (!data.some(d => d.value)) return `<div class="none">No sales in this range</div>`;
+  const max = Math.max(...data.map(d => d.value));
+  const every = Math.ceil(data.length / 12); // thin out labels when there are many bars
+  return `<div class="vchart"><span class="vmax">${fmt(max)}</span>
+    ${data.map(d => `<div class="vcol" data-tip="${esc(d.label)}\n${unit}${fmt(d.value)}${d.extra ? "\n" + d.extra : ""}">
+      <div class="bar" style="height:${(d.value / max) * 100}%"></div></div>`).join("")}</div>
+    <div class="vlabels">${data.map((d, i) => `<span>${i % every === 0 ? esc(d.short || d.label) : ""}</span>`).join("")}</div>`;
+}
+function hbars(data, valueFmt) {
+  if (!data.length) return `<div class="none">No sales in this range</div>`;
+  const max = Math.max(...data.map(d => d.value)) || 1;
+  return data.map(d => `<div class="hrow" data-tip="${esc(d.tip || d.label)}">
+      <span class="hl ar" style="text-align:left">${esc(d.label)}</span>
+      <div class="track"><div class="bar" style="width:${(d.value / max) * 100}%"></div></div>
+      <span class="hv">${valueFmt(d)}</span></div>`).join("");
+}
+function showStats() {
+  if (!ST.from) [ST.from, ST.to] = PRESETS.week();
+  openModal(`<h2>Statistics</h2><div class="body" id="stBody"></div>
+    <div class="foot"><button class="btn" id="stCsv">⬇ Export items CSV</button><button class="btn" id="stClose">Close</button></div>`, true);
+  $("stClose").onclick = closeModal;
+  renderStats();
+}
+function renderStats() {
+  const sales = salesBetween(ST.from, ST.to);
+  const voided = salesBetween(ST.from, ST.to, true).filter(s => s.voided);
+  const revenue = sales.reduce((a, s) => a + s.total, 0);
+  const itemsSold = sales.reduce((a, s) => a + s.lines.reduce((b, l) => b + l.qty, 0), 0);
+  const discounts = sales.reduce((a, s) => a + (s.disc || 0), 0);
+  const days = Math.round((dayStart(ST.to) - dayStart(ST.from)) / DAY) + 1;
+
+  // previous period of the same length, for comparison
+  const prev = salesBetween(new Date(dayStart(ST.from) - days * DAY), new Date(dayStart(ST.from) - DAY));
+  const prevRev = prev.reduce((a, s) => a + s.total, 0);
+  const delta = prevRev ? Math.round((revenue - prevRev) / prevRev * 100) : null;
+
+  // revenue over time: per day, or per month for long ranges
+  let timeData = [];
+  if (days <= 62) {
+    for (let i = 0; i < days; i++) {
+      const d = new Date(dayStart(ST.from).getTime() + i * DAY);
+      const rs = sales.filter(s => dayStart(s.at).getTime() === d.getTime());
+      timeData.push({ label: d.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short" }),
+        short: days <= 8 ? d.toLocaleDateString("en-GB", { weekday: "short" }) : String(d.getDate()),
+        value: rs.reduce((a, s) => a + s.total, 0), extra: `${rs.length} receipt(s)` });
+    }
+  } else {
+    const m = new Map();
+    sales.forEach(s => { const d = new Date(s.at); const k = d.getFullYear() * 12 + d.getMonth(); m.set(k, (m.get(k) || 0) + s.total); });
+    const start = ST.from.getFullYear() * 12 + ST.from.getMonth(), end = ST.to.getFullYear() * 12 + ST.to.getMonth();
+    for (let k = start; k <= end; k++) {
+      const d = new Date(Math.floor(k / 12), k % 12, 1);
+      timeData.push({ label: d.toLocaleDateString("en-GB", { month: "long", year: "numeric" }), short: d.toLocaleDateString("en-GB", { month: "short" }), value: m.get(k) || 0 });
+    }
+  }
+
+  // by hour of day
+  const hours = Array.from({ length: 24 }, (_, h) => ({ label: `${String(h).padStart(2, "0")}:00–${String(h + 1).padStart(2, "0")}:00`, short: String(h), value: 0, n: 0 }));
+  sales.forEach(s => { const h = hours[new Date(s.at).getHours()]; h.value += s.total; h.n++; });
+  hours.forEach(h => h.extra = `${h.n} receipt(s)`);
+  const busiest = hours.reduce((a, h) => h.value > a.value ? h : a, hours[0]);
+
+  // items and categories
+  const items = new Map(), cats = new Map();
+  sales.forEach(s => s.lines.forEach(l => {
+    const v = l.qty * l.price * (1 - (s.discount || 0) / 100);
+    const it = items.get(l.name) || { label: l.name, qty: 0, value: 0, cat: catName(l.cat) };
+    it.qty += l.qty; it.value += v; items.set(l.name, it);
+    const cn = catName(l.cat); const c = cats.get(cn) || { label: cn, qty: 0, value: 0 };
+    c.qty += l.qty; c.value += v; cats.set(cn, c);
+  }));
+  const topQty = [...items.values()].sort((a, b) => b.qty - a.qty).slice(0, 10);
+  const topRev = [...items.values()].sort((a, b) => b.value - a.value).slice(0, 10);
+  const catList = [...cats.values()].sort((a, b) => b.value - a.value);
+
+  const byKey = key => {
+    const m = new Map();
+    sales.forEach(s => { const k = s[key] || "—"; const g = m.get(k) || { label: k, value: 0, n: 0 }; g.value += s.total; g.n++; m.set(k, g); });
+    return [...m.values()].sort((a, b) => b.value - a.value);
+  };
+  const pct = v => revenue ? Math.round(v / revenue * 100) + "%" : "";
+  const money = d => `${fmt(d.value)} <small>${pct(d.value)}</small>`;
+
+  $("stBody").innerHTML = `
+    ${presetButtons(ST.preset)}
+    <div class="filters">
+      <label>From<input type="date" id="stFrom" value="${toInput(ST.from)}"></label>
+      <label>To<input type="date" id="stTo" value="${toInput(ST.to)}"></label>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="k-l">Revenue (LBP)</div><div class="k-v">${fmt(revenue)}</div>
+        <div class="k-s">${delta === null ? "no previous data" : `${delta >= 0 ? "▲" : "▼"} ${Math.abs(delta)}% vs previous ${days} day(s)`}</div></div>
+      <div class="kpi"><div class="k-l">Receipts</div><div class="k-v">${sales.length}</div><div class="k-s">${(sales.length / days).toFixed(1)} per day</div></div>
+      <div class="kpi"><div class="k-l">Average ticket</div><div class="k-v">${fmt(sales.length ? revenue / sales.length : 0)}</div><div class="k-s">LBP per receipt</div></div>
+      <div class="kpi"><div class="k-l">Items sold</div><div class="k-v">${fmt(itemsSold)}</div><div class="k-s">${items.size} different items</div></div>
+      <div class="kpi"><div class="k-l">Discounts given</div><div class="k-v">${fmt(discounts)}</div><div class="k-s">LBP</div></div>
+      <div class="kpi"><div class="k-l">Voided</div><div class="k-v">${voided.length}</div><div class="k-s">LBP ${fmt(voided.reduce((a, s) => a + s.total, 0))}</div></div>
+    </div>
+    <div class="charts">
+      <div class="card full"><h3>Revenue by ${days <= 62 ? "day" : "month"} (LBP)</h3>${vbars(timeData, "LBP ")}</div>
+      <div class="card full"><h3>Revenue by hour of day (LBP)${busiest.value ? ` — busiest ${busiest.label}` : ""}</h3>${vbars(hours, "LBP ")}</div>
+      <div class="card"><h3>Top items by quantity</h3>${hbars(topQty.map(d => ({ ...d, value: d.qty, tip: `${d.label}\n${d.qty} sold · LBP ${fmt(d.value)}` })), d => fmt(d.value))}</div>
+      <div class="card"><h3>Top items by revenue (LBP)</h3>${hbars(topRev.map(d => ({ ...d, tip: `${d.label}\n${d.qty} sold · LBP ${fmt(d.value)}` })), money)}</div>
+      <div class="card"><h3>Sales by category (LBP)</h3>${hbars(catList.map(d => ({ ...d, tip: `${d.label}\n${d.qty} items · LBP ${fmt(d.value)}` })), money)}</div>
+      <div class="card"><h3>Payment methods (LBP)</h3>${hbars(byKey("method").map(d => ({ ...d, tip: `${d.label}\n${d.n} receipt(s)` })), money)}</div>
+      <div class="card"><h3>By cashier (LBP)</h3>${hbars(byKey("cashier").map(d => ({ ...d, tip: `${d.label}\n${d.n} receipt(s)` })), money)}</div>
+    </div>`;
+
+  const body = $("stBody");
+  body.querySelectorAll("[data-preset]").forEach(b => b.onclick = () => { ST.preset = b.dataset.preset; [ST.from, ST.to] = PRESETS[ST.preset](); renderStats(); });
+  $("stFrom").onchange = e => { if (e.target.value) { ST.from = fromInput(e.target.value); ST.preset = ""; renderStats(); } };
+  $("stTo").onchange = e => { if (e.target.value) { ST.to = fromInput(e.target.value); ST.preset = ""; renderStats(); } };
+  $("stCsv").onclick = () => downloadCSV(`items_${toInput(ST.from)}_${toInput(ST.to)}.csv`, [
+    ["Item", "Category", "Quantity", "Revenue LBP"],
+    ...[...items.values()].sort((a, b) => b.value - a.value).map(d => [d.label, d.cat, d.qty, Math.round(d.value)]),
+  ]);
+}
+
+/* ---------- menu manager ---------- */
+function showMenuManager() {
+  openModal(`<h2>Menu manager</h2><div class="body">
+    <div class="field"><label>Shop name</label><input id="mShop" value="${esc(S.shop)}"></div>
+    <div class="field"><label>Cashier</label><input id="mCashier" value="${esc(S.cashier)}"></div>
+    <div class="field"><label>Menu (one category per line starting with #, then "item name = price")</label>
+      <textarea id="mText" rows="14" class="ar" style="direction:rtl;font-size:14px">${esc(
+        S.menu.map(c => "# " + c.name + "\n" + c.items.map(i => `${i.name} = ${i.price}`).join("\n")).join("\n\n"))}</textarea></div>
+    </div><div class="foot"><button class="btn danger" id="mReset">Reset default</button><button class="btn" id="mNo">Cancel</button><button class="btn primary" id="mOk">Save</button></div>`);
+  $("mNo").onclick = closeModal;
+  $("mReset").onclick = () => confirmBox("Reset menu to default?", () => { S.menu = blankState().menu; curCat = null; render(); });
+  $("mOk").onclick = () => {
+    const menu = []; let cur = null;
+    $("mText").value.split("\n").forEach(raw => {
+      const line = raw.trim(); if (!line) return;
+      if (line.startsWith("#")) { cur = { id: "c" + menu.length + "_" + Date.now().toString(36), name: line.slice(1).trim(), items: [] }; menu.push(cur); return; }
+      const m = line.match(/^(.*?)\s*=\s*([\d.,]+)$/);
+      if (m && cur) cur.items.push({ name: m[1].trim(), price: parseFloat(m[2].replace(/,/g, "")) });
+    });
+    if (!menu.length) return toast("Menu is empty — not saved");
+    S.menu = menu; S.shop = $("mShop").value || S.shop; S.cashier = $("mCashier").value || S.cashier;
+    curCat = null; closeModal(); render(); toast("Menu saved");
+  };
+}
+
+/* ---------- events ---------- */
+document.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", () => actions[b.dataset.act]()));
+$("tableBtn").onclick = showTables;
+$("customerBtn").onclick = () => ask("Guests", "Number of guests", order().guests || 1, v => { order().guests = parseInt(v) || 1; render(); }, "number");
+$("menuBtn").onclick = showMenuManager;
+$("lockBtn").onclick = () => ask("Change cashier", "Cashier name", S.cashier, v => { if (v.trim()) { S.cashier = v.trim(); render(); } });
+$("payBtn").onclick = () => showPay(takeEntryNumber());
+
+$("lines").addEventListener("click", e => {
+  const row = e.target.closest(".line"); if (!row) return;
+  const i = +row.dataset.i; selLine = selLine === i ? null : i; render();
+});
+$("grid").addEventListener("click", e => {
+  const c = e.target.closest("[data-cat]"); if (c) { curCat = c.dataset.cat; renderCatalog(); return; }
+  const a = e.target.closest("[data-add]"); if (a) { const [cid, idx] = a.dataset.add.split(":"); addItem(cid, +idx); }
+});
+$("crumbs").addEventListener("click", e => { if (e.target.closest("[data-back]")) { curCat = null; renderCatalog(); } });
+
+document.querySelectorAll(".numpad [data-k]").forEach(b => b.addEventListener("click", () => {
+  const k = b.dataset.k;
+  if (/^\d+$/.test(k)) entry = (entry === "0" ? "" : entry) + k;
+  else if (k === ".") { if (!entry.includes(".")) entry = (entry || "0") + "."; }
+  else if (k === "CE") entry = "";
+  else if (k === "+") return changeQty(1);
+  else if (k === "-") return changeQty(-1);
+  else if (k === "QTY") {
+    const l = needLine(); const n = takeEntryNumber();
+    if (l && n != null) { if (n <= 0) { order().lines.splice(selLine, 1); selLine = null; } else l.qty = n; }
+  }
+  render();
+}));
+
+// physical keyboard support for the numpad
+document.addEventListener("keydown", e => {
+  if ($("overlay").classList.contains("open") || e.target.tagName === "INPUT") return;
+  if (/^\d$/.test(e.key)) { entry += e.key; render(); }
+  else if (e.key === "Backspace") { entry = entry.slice(0, -1); render(); }
+  else if (e.key === "Escape") { entry = ""; render(); }
+  else if (e.key === "+") changeQty(1);
+  else if (e.key === "-") changeQty(-1);
+  else if (e.key === "Delete") actions.delete();
+  else if (e.key === "Enter") showPay(takeEntryNumber());
+});
+
+function tick() {
+  const d = new Date();
+  $("clock").textContent = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + "  " +
+    d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "2-digit" });
+}
+setInterval(tick, 10000); tick();
+order(); render();
+</script>
+</body>
+</html>
